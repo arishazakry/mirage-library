@@ -1,0 +1,8 @@
+{
+  "HomePage": {
+    "about": "Về Mirage",
+    "welcome_message": "Chào mừng đến với Dự án Mirage",
+    "description": "MirageOS là một hệ điều hành thư viện xây dựng các unikernel cho các ứng dụng mạng an toàn, hiệu suất cao.",
+    "learn_more": "Tìm hiểu thêm"
+  }
+}
