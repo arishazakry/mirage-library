@@ -4,6 +4,15 @@ import pgPool from "../config/postgresql.js";
 
 export const revalidate = 60;
 
+const isArray = {
+  station_ar_genre: true,
+  artist_sp_genre: true,
+  artist_wd_genre: true,
+  artist_wd_instruments: true,
+  artist_wd_voicetype: true,
+  track_wd_instrumentation: true,
+};
+
 export async function POST(req) {
   let client;
   try {
@@ -56,6 +65,9 @@ export async function POST(req) {
               );
               values.push(filter.value[0], filter.value[1]);
               valueIndex += 1;
+            } else if (isArray[key]) {
+              whereClauses.push(`${key}  && $${valueIndex}`);
+              values.push(filter.value);
             } else {
               // Handle arrays (e.g., location_ne_country)
               whereClauses.push(`${key} = ANY($${valueIndex})`);
@@ -69,7 +81,7 @@ export async function POST(req) {
         valueIndex++;
       }
     }
-    console.log(filters, whereClauses);
+
     let searchClause = "";
     if (query) {
       searchClause = `AND (e.name ILIKE $${valueIndex} OR e.description ILIKE $${valueIndex})`;
@@ -99,7 +111,7 @@ export async function POST(req) {
     `;
 
     values.push(size, from);
-
+    console.log(sql, values);
     client = await pgPool.connect();
     const { rows } = await client.query(sql, values);
 
