@@ -1,6 +1,6 @@
 ﻿old_fields,new_fields,export?
 apiVersion,Event_RG_Version,Y
-city_id,Location_RG_ID,Y
+city_id,location_rg_id,Y
 latitude,Location_RG_Latitude,Y
 longitude,Location_RG_Longitude,Y
 utcOffset,Location_RG_utcOffset,Y

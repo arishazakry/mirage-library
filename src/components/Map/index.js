@@ -98,7 +98,7 @@ export default function Map({ locs, height, width, highlight }) {
         setDomain({ zoom, center });
         if (highlight) {
           const _highlight = locs.find(
-            (d) => d["Location_RG_ID"] === highlight.Location_RG_ID
+            (d) => d["location_rg_id"] === highlight.location_rg_id
           );
           if (_highlight) {
             data.push({

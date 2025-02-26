@@ -40,11 +40,11 @@ export default function EventDetail({
     try {
       const _locsMap = {};
       debugger;
-      locs.forEach((d) => (_locsMap[d["Location_RG_ID"]] = d));
-      const _locs = groups(events, (d) => d["Location_RG_ID"]).map(
+      locs.forEach((d) => (_locsMap[d["location_rg_id"]] = d));
+      const _locs = groups(events, (d) => d["location_rg_id"]).map(
         ([c, cou]) => ({
           title: _locsMap[c]?.title,
-          Location_RG_ID: c,
+          location_rg_id: c,
           count: cou.length,
           lat: _locsMap[c]?.lat,
           long: _locsMap[c]?.long,

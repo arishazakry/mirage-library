@@ -1,6 +1,6 @@
 [
   { "variable": "Event_RG_Version", "export": true },
-  { "variable": "Location_RG_ID", "export": true },
+  { "variable": "location_rg_id", "export": true },
   { "variable": "Location_RG_Latitude", "export": true },
   { "variable": "Location_RG_Longitude", "export": true },
   { "variable": "Location_RG_utcOffset", "export": true },
