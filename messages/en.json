@@ -4,5 +4,14 @@
     "welcome_message": "Welcome to Mirage Project",
     "description": "Mirage is a library operating system that constructs unikernels for secure, high-performance network applications.",
     "learn_more": "Learn more"
+  },
+  "Dashboard": {
+    "earth_view": "Earth",
+    "event_list": "Event List",
+    "event_selected": "Selected Event",
+    "event_detail": "Event Detail",
+    "listen": "Listen",
+    "list_map": "Event List Map",
+    "list_viz": "Event List Visualization"
   }
 }

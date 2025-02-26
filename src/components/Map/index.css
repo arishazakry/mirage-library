@@ -1,0 +1,16 @@
+/*#Map .x2y2 rect.drag {*/
+/*  pointer-events: none !important;*/
+/*}*/
+/*#Map .x2y2 {*/
+/*    display: none;*/
+/*}*/
+.legend .traces .legendtoggle {
+    display: none;
+}
+.legend .traces {
+    opacity: 1 !important;
+}
+
+/*#Map g.legend {*/
+/*    pointer-events: none!important;*/
+/*}*/

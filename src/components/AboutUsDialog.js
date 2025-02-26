@@ -10,8 +10,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 export default function AboutUsDialog() {
+  const t = useTranslations("HomePage");
   const [open, setOpen] = useState(false);
 
   // Show the dialog when the page loads
@@ -23,17 +25,14 @@ export default function AboutUsDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       {/* About Us Button */}
       <DialogTrigger asChild>
-        <Button variant="outline">About Us</Button>
+        <Button variant="ghost">{t("about")}</Button>
       </DialogTrigger>
 
       {/* Dialog Content */}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>About Us</DialogTitle>
-          <DialogDescription>
-            Welcome to our platform! We specialize in building modern web
-            applications with Next.js.
-          </DialogDescription>
+          <DialogTitle>{t("about")}</DialogTitle>
+          <DialogDescription>{t("welcome_message")}</DialogDescription>
         </DialogHeader>
       </DialogContent>
     </Dialog>

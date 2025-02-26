@@ -4,5 +4,14 @@
     "welcome_message": "Chào mừng đến với Dự án Mirage",
     "description": "MirageOS là một hệ điều hành thư viện xây dựng các unikernel cho các ứng dụng mạng an toàn, hiệu suất cao.",
     "learn_more": "Tìm hiểu thêm"
+  },
+  "Dashboard": {
+    "earth_view": "Trái Đất",
+    "event_list": "Danh sách sự kiện",
+    "event_selected": "Sự kiện đã chọn",
+    "event_detail": "Chi tiết sự kiện",
+    "listen": "Nghe",
+    "list_map": "Bản đồ sự kiện",
+    "list_viz": "Hình ảnh hóa danh sách sự kiện"
   }
 }
