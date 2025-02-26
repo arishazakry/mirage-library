@@ -1,17 +1,15 @@
-"use client";
-
 import * as actionTypes from "./actions/selectedList";
 const initialState = {
-  items: {},
+  items: new Map(),
   currentList: [],
 };
 
-const _state = (state = initialState, action) => {
+export default (state = initialState, action) => {
   switch (action.type) {
     case actionTypes.CLEAR_ITEMS:
       return {
         ...state,
-        items: {},
+        items: new Map(),
       };
     case actionTypes.ADD_TO_BASKET:
       return {
@@ -19,6 +17,7 @@ const _state = (state = initialState, action) => {
         ...updateObjectInMap(state.items, state.currentList, action.payload),
       };
     case actionTypes.ADDS_TO_BASKET:
+      debugger;
       return {
         ...state,
         ...updateObjectsInMap(state.items, state.currentList, action.payload),
@@ -42,17 +41,16 @@ const _state = (state = initialState, action) => {
       return state;
   }
 };
-export default _state;
 function initList(arrayMap, action) {
   return action.payload.map((d) => {
-    return { ...d, inBasket: !!arrayMap[d._id] };
+    return { ...d, inBasket: arrayMap.has(d.event_ma_id) };
   });
 }
 function updateObjectInMap(arrayMap, _array, action) {
   const array = [..._array];
-  if (!arrayMap[action._id]) {
-    arrayMap.set(action._id, { ...action });
-    const i = array.findIndex((d) => d._id === action._id);
+  if (!arrayMap.has(action.event_ma_id)) {
+    arrayMap.set(action.event_ma_id, { ...action });
+    const i = array.findIndex((d) => d.event_ma_id === action.event_ma_id);
     if (i > -1) array[i] = { ...action, inBasket: true };
   }
   return {
@@ -64,9 +62,9 @@ function updateObjectInMap(arrayMap, _array, action) {
 function updateObjectsInMap(arrayMap, _array, actions) {
   const array = [..._array];
   actions.forEach((action) => {
-    if (!arrayMap[action._id]) {
-      arrayMap.set(action._id, { ...action });
-      const i = array.findIndex((d) => d._id === action._id);
+    if (!arrayMap.has(action.event_ma_id)) {
+      arrayMap.set(action.event_ma_id, { ...action });
+      const i = array.findIndex((d) => d.event_ma_id === action.event_ma_id);
       if (i > -1) array[i] = { ...action, inBasket: true };
     }
   });
@@ -76,10 +74,10 @@ function updateObjectsInMap(arrayMap, _array, actions) {
   };
 }
 function removeItem(arrayMap, _array, action) {
-  if (arrayMap[action._id]) {
+  if (arrayMap.has(action.event_ma_id)) {
     const array = [..._array];
-    arrayMap.delete(action._id);
-    const i = array.findIndex((d) => d._id === action._id);
+    arrayMap.delete(action.event_ma_id);
+    const i = array.findIndex((d) => d.event_ma_id === action.event_ma_id);
     if (i > -1) array[i] = { ...action, inBasket: true };
     return {
       items: arrayMap,
@@ -95,9 +93,9 @@ function removeItem(arrayMap, _array, action) {
 function removeItems(arrayMap, _array, actions) {
   const array = [..._array];
   actions.forEach((action) => {
-    if (arrayMap[action._id]) {
-      arrayMap.delete(action._id);
-      const i = array.findIndex((d) => d._id === action._id);
+    if (arrayMap.has(action.event_ma_id)) {
+      arrayMap.delete(action.event_ma_id);
+      const i = array.findIndex((d) => d.event_ma_id === action.event_ma_id);
       if (i > -1) array[i] = { ...action, inBasket: false };
     }
   });

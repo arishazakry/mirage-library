@@ -406,10 +406,7 @@ function DetailCard({ data, onSelect, meanradar }) {
       <PaperCustom elevation={3}>
         <Grid container spacing={1}>
           <Grid item xs={12}>
-            <Typography color="text.secondary" gutterBottom>
-              {" "}
-              {timeStation}
-            </Typography>
+            <p className="text-muted-foreground"> {timeStation}</p>
           </Grid>
           <Grid item xs={12}>
             <Typography

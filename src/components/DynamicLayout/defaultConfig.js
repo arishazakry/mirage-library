@@ -16,14 +16,14 @@ export function defaultConfig(api, t) {
 
   const panel7 = api.addPanel({
     id: "panel_listen",
-    component: "default",
+    component: "media_detail",
     title: t("listen"),
     position: { referencePanel: panel6 },
   });
 
   api.addPanel({
     id: "panel_list_map",
-    component: "default",
+    component: "event_map",
     title: t("list_map"),
     position: { referencePanel: panel6 },
   });
@@ -44,7 +44,7 @@ export function defaultConfig(api, t) {
 
   const panel5 = api.addPanel({
     id: "panel_event_selected",
-    component: "default",
+    component: "event_selected_list",
     title: t("event_selected"),
     position: { referencePanel: panel4, direction: "right" },
   });

@@ -1,0 +1,145 @@
+import {
+  Avatar,
+  Box,
+  Chip,
+  Collapse,
+  Divider,
+  Grid,
+  IconButton,
+  Link,
+  Stack,
+  Typography,
+} from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { styled } from "@mui/material/styles";
+import "./index.css";
+import PaperCustom from "../PaperCustom";
+
+const ExpandMore = styled((props) => {
+  const { expand, ...other } = props;
+  return <ExpandMoreIcon {...other} />;
+})(({ theme, expand }) => ({
+  transform: !expand ? "rotate(0deg)" : "rotate(180deg)",
+  marginLeft: "auto",
+  transition: theme.transitions.create("transform", {
+    duration: theme.transitions.duration.shortest,
+  }),
+}));
+
+function ListenCard({ data, onSelect }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <PaperCustom>
+        <Grid container spacing={1}>
+          <Grid item xs={6}>
+            <Typography
+              variant="h4"
+              component="div"
+              onClick={
+                data.Track_SP_Name
+                  ? () => onSelect({ Track_SP_Name: [data.Track_SP_Name] })
+                  : null
+              }
+            >
+              {data.Track_SP_Name}
+            </Typography>
+            {data.year_released && (
+              <Typography color="text.secondary" gutterBottom>
+                {" "}
+                {data.year_released}
+              </Typography>
+            )}
+            {data.track_name_genre && (
+              <Chip label={data.track_name_genre} size={"small"} />
+            )}
+          </Grid>
+          {data.artist_info && (
+            <Grid item>
+              <Box sx={{ flex: "1 0 auto", display: "flex" }}>
+                <Avatar
+                  aria-label="recipe"
+                  src={data.artist_info.Artist_SP_ImageURL}
+                  sx={{ mr: 1 }}
+                >
+                  {data.artist_info.Artist_SP_Name[0]}
+                </Avatar>
+                <div>
+                  <Typography variant="h5" color={"text.primary"}>
+                    {data.artist_info.Artist_SP_Name}
+                  </Typography>
+                  <Typography variant="subtitle2">
+                    from {data.artist_info.Artist_WD_Country ?? "N/A"}
+                  </Typography>
+                </div>
+              </Box>
+              {data.artist_info.Artist_SP_Genre &&
+                data.artist_info.Artist_SP_Genre.map((t) => (
+                  <Chip key={t} label={t} size={"small"} />
+                ))}
+            </Grid>
+          )}
+        </Grid>
+      </PaperCustom>
+      <PaperCustom>
+        <Grid item xs={12}>
+          <Grid container>
+            <Divider sx={{ mt: 2, mb: 2, flexGrow: 1 }} />
+            <Typography
+              variant={"h5"}
+              component={"div"}
+              sx={{ margin: "auto" }}
+            >
+              Music Platform
+            </Typography>
+            <Divider sx={{ mt: 2, mb: 2, flexGrow: 1 }} />
+          </Grid>
+          <Grid item xs={12}>
+            <iframe
+              loading="lazy"
+              src={`https://open.spotify.com/embed/track/${data.Track_SP_ID}`}
+              width={"100%"}
+              height="80"
+              frameBorder="0"
+              data-mce-fragment="1"
+            ></iframe>
+          </Grid>
+          {(data.spotify_uri || data.Track_WD_YouTubeID) && (
+            <>
+              {data.spotify_uri && (
+                <Grid item xs={12}>
+                  <iframe
+                    loading="lazy"
+                    src={data.spotify_uri.replace(
+                      "com/track",
+                      "com/embed/track"
+                    )}
+                    width={"100%"}
+                    height="80"
+                    frameBorder="0"
+                    data-mce-fragment="1"
+                  ></iframe>
+                </Grid>
+              )}
+              {data.Track_WD_YouTubeID && (
+                <Grid item xs={12}>
+                  <iframe
+                    width={"100%"}
+                    height={"auto"}
+                    loading="lazy"
+                    src={`https://www.youtube-nocookie.com/embed/${data.Track_WD_YouTubeID}`}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </Grid>
+              )}
+            </>
+          )}
+        </Grid>
+      </PaperCustom>
+    </div>
+  );
+}
+
+export default ListenCard;

@@ -1,28 +1,30 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import DetailCard from "../DetailCard";
+import { cn } from "@/lib/utils";
 
-export default function DetailView({
+export default function EventDetail({
   currentDetail,
   onSelect,
   meanradar,
   className = "",
 }) {
   return (
-    <Card className={`w-full bg-background ${className}`}>
-      <CardContent className="h-full relative">
-        <div className="h-full w-full p-2.5 overflow-auto flex flex-col flex-nowrap bg-background text-foreground">
-          {currentDetail ? (
-            <DetailCard
-              data={currentDetail}
-              onSelect={onSelect}
-              meanradar={meanradar}
-            />
-          ) : (
-            <div>Select from Event List</div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div
+      className={cn(
+        "flex flex-col p-2 gap-4 overflow-auto h-full w-full",
+        className
+      )}
+    >
+      {currentDetail ? (
+        <DetailCard
+          data={currentDetail}
+          onSelect={onSelect}
+          meanradar={meanradar}
+        />
+      ) : (
+        <div>Select from Event List</div>
+      )}
+    </div>
   );
 }

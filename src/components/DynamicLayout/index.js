@@ -6,8 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { defaultConfig } from "./defaultConfig";
 import { RightControls } from "./control";
 import EventList from "@/app/@widgets/event/page";
-import EventDetail from "../EventDetail";
 import EventDetailWrapper from "../EventDetailWrapper";
+import ListenCardWrapper from "../ListenCard/wrapper";
+import EventSelectedList from "@/app/@widgets/selected/page";
+import EventMap from "@/app/@widgets/eventmap/page";
 
 export default function DynamicLayout() {
   const t = useTranslations("Dashboard");
@@ -75,7 +77,10 @@ export default function DynamicLayout() {
           default: EarthView,
           earth: EarthView,
           event_list: EventList,
+          event_selected_list: EventSelectedList,
           event_detail: EventDetailWrapper,
+          media_detail: ListenCardWrapper,
+          event_map: EventMap,
         }}
         rightHeaderActionsComponent={RightControls}
       ></DockviewReact>

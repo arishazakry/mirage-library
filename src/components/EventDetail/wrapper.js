@@ -24,7 +24,7 @@ import Map from "../Map";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { groups } from "d3";
 
-export default function ({
+export default function EventDetail({
   currentDetail,
   onTogleWin,
   locs,
@@ -140,6 +140,7 @@ export default function ({
         sx={{
           ...sx,
           width: "100%",
+          height: "100%",
           backgroundColor: (theme) => semicolor(theme.palette.background.paper),
         }}
       >

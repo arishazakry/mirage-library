@@ -26,7 +26,6 @@ const EventDetailWrapper = ({ event }) => {
     });
     return meanradar;
   }, [vizdata]);
-  console.log(detail);
   return (
     <EventDetail
       currentDetail={detail}
