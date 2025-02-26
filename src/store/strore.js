@@ -14,7 +14,7 @@ const APIKey = process.env.DATA_API_KEY;
 export const APIUrl =
   (process.env.NODE_ENV === "production"
     ? process.env.DATA_API
-    : process.env.DATA_API_LOCAL) ?? "";
+    : process.env.DATA_API_LOCAL) ?? "api";
 export const HOMEURL =
   (process.env.NODE_ENV === "production"
     ? process.env.REACT_APP_DATA_HOMEPAGE

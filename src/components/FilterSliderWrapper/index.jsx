@@ -24,7 +24,12 @@ const FilterSliderWrapper = forwardRef(
 
     const handleModeChange = (newMode) => {
       setMode(newMode);
-      if (onValueChange) onValueChange({ value: _value, mode: newMode });
+      const newv =
+        newMode === "range"
+          ? [_value[0], props.max ?? _value[0]]
+          : [_value[0] ?? props.min];
+      setValue(newv);
+      if (onValueChange) onValueChange({ value: newv, mode: newMode });
     };
 
     const handleSliderChange = (newMode, newValue) => {
