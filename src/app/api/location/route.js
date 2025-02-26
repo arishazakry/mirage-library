@@ -1,19 +1,29 @@
 import { NextResponse } from "next/server";
-import esClient from "../config/elasticsearch";
 import pgPool from "../config/postgresql";
 
-export async function GET(req) {
+export async function GET() {
+  const client = await pgPool.connect();
   try {
-    const result = await esClient.search({
-      index: "location",
-      body: {
-        query: { match_all: {} },
-        size: 100, // Giới hạn số bản ghi trả về
-      },
-    });
+    const query = `
+      SELECT 
+        location_rg_id, 
+        location_rg_city, 
+        location_rg_country, 
+        location_rg_latitude, 
+        location_rg_longitude 
+      FROM location;
+    `;
 
-    return NextResponse.json(result.hits.hits);
+    const result = await client.query(query);
+
+    return NextResponse.json(result.rows, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error fetching location info:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  } finally {
+    client.release();
   }
 }

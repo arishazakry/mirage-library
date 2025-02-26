@@ -8,7 +8,7 @@ import {
 import axios from "axios";
 import lzString from "lz-string";
 // import exportVariable from "./data/MIRAGE_exportvariables.csv";
-import locationData from "./data/location.json";
+// import locationData from "./data/location.json";
 
 const APIKey = process.env.DATA_API_KEY;
 export const APIUrl =
@@ -31,6 +31,7 @@ const useStore = create((set) => {
     }));
   return {
     locs: [],
+    locationData: [],
     countries: [],
     fields: { value: { stationData: [], locationData: [] } },
     event_export_list: { value: {} },
@@ -50,27 +51,32 @@ const useStore = create((set) => {
       setLoading("fields", true);
 
       try {
-        const [cityData, stationFields, locationFields] = await Promise.all([
+        const [
+          { data: cityData },
+          { data: stationFields },
+          { data: locationFields },
+          { data: locationData },
+        ] = await Promise.all([
           axios.get(`${APIUrl}/station/city`),
           axios.get(`${APIUrl}/station/fields/`),
           axios.get(`${APIUrl}/location/fields/`),
+          axios.get(`${APIUrl}/location`),
         ]);
-
         const byLocName = {};
         locationData.forEach((d) => {
-          d.long = +d.Location_RG_Longitude;
-          d.lat = +d.Location_RG_Latitude;
-          delete d.Location_RG_Longitude;
-          delete d.Location_RG_Latitude;
-          byLocName[d["Location_RG_ID"]] = d;
+          d.long = +d.location_rg_longitude;
+          d.lat = +d.location_rg_latitude;
+          delete d.location_rg_longitude;
+          delete d.location_rg_latitude;
+          byLocName[d["location_rg_id"]] = d;
         });
 
-        const locs = cityData.data.map((d) => {
-          const locinfo = byLocName[d._id] ?? {};
+        const locs = cityData.map((d) => {
+          const locinfo = byLocName[d.location_id] ?? {};
           return {
             ...locinfo,
             title: `${locinfo.location_rg_city} - ${locinfo.location_rg_country}`,
-            count: d.count,
+            count: +d.count,
           };
         });
 
@@ -91,17 +97,18 @@ const useStore = create((set) => {
         set({
           locs,
           countries,
-          fields: { value: { ...stationFields.data, ...locationFields.data } },
+          locationData,
+          fields: { value: { ...stationFields, ...locationFields } },
         });
         setLoading("fields", false);
         // load export list
-        const event_export_list = {};
-        const exportData = await d3csv("./data/MIRAGE_exportvariables.csv");
-        exportData.forEach((d) => {
-          if (d["export?"] === "Y") event_export_list[d["new_fields"]] = true;
-        });
+        // const event_export_list = {};
+        // const exportData = await d3csv("./data/MIRAGE_exportvariables.csv");
+        // exportData.forEach((d) => {
+        //   if (d["export?"] === "Y") event_export_list[d["new_fields"]] = true;
+        // });
 
-        set({ event_export_list });
+        // set({ event_export_list });
       } catch (error) {
         //   set({ loading: false, error, hasError: true });
         setLoading("fields", false);
@@ -140,8 +147,8 @@ const useStore = create((set) => {
           const data = _data?.data;
           // flat data
           if (data) {
-            // data.lat = data.Location_RG_Longitude;
-            // data.long = data.Location_RG_Latitude;
+            // data.lat = data.location_rg_longitude;
+            // data.long = data.location_rg_latitude;
             data.long = data.location_rg_longitude;
             data.lat = data.location_rg_latitude;
             delete data.location_rg_longitude;

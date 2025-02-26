@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import InitWrapper from "@/components/InitWrapper";
 
 export default async function LocaleLayout(props) {
   const { children, params } = props;
@@ -28,7 +29,7 @@ export default async function LocaleLayout(props) {
           disableTransitionOnChange
         >
           <NextIntlClientProvider messages={messages}>
-            {children}
+            <InitWrapper>{children}</InitWrapper>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>
