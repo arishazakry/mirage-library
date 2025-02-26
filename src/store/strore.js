@@ -12,13 +12,13 @@ import locationData from "./data/location.json";
 
 const APIKey = process.env.DATA_API_KEY;
 export const APIUrl =
-  process.env.NODE_ENV === "production"
+  (process.env.NODE_ENV === "production"
     ? process.env.DATA_API
-    : process.env.DATA_API_LOCAL;
+    : process.env.DATA_API_LOCAL) ?? "";
 export const HOMEURL =
-  process.env.NODE_ENV === "production"
+  (process.env.NODE_ENV === "production"
     ? process.env.REACT_APP_DATA_HOMEPAGE
-    : process.env.REACT_APP_DATA_HOMEPAGE_LOCAL;
+    : process.env.REACT_APP_DATA_HOMEPAGE_LOCAL) ?? "";
 
 axios.defaults.headers.common = {
   "api-key": APIKey,
