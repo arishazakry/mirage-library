@@ -1,5 +1,5 @@
 "use client";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import axios from "axios";
 import lzString from "lz-string";
 import useStore, { APIUrl, HOMEURL } from "@/store/strore"; // Zustand store
@@ -9,8 +9,10 @@ import { selectFilters } from "./reducer/streamfilters";
 const useGetShortenLink = () => {
   const { getDetail } = useStore();
   const filters = useSelector(selectFilters);
-  const eventSelectedData = useSelector((state) =>
-    Object.values(state.seletedList.items)
+  const _eventSelectedData = useSelector((state) => state.seletedList.items);
+  const eventSelectedData = useMemo(
+    () => Array.from(_eventSelectedData.values()),
+    [_eventSelectedData]
   );
 
   const getShortenLink = useCallback(async () => {

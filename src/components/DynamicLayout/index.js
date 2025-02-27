@@ -10,6 +10,7 @@ import EventDetailWrapper from "../EventDetailWrapper";
 import ListenCardWrapper from "../ListenCard/wrapper";
 import EventSelectedList from "@/app/@widgets/selected/page";
 import EventMap from "@/app/@widgets/eventmap/page";
+import VizPanelWraper from "@/app/@widgets/viz/page";
 
 export default function DynamicLayout() {
   const t = useTranslations("Dashboard");
@@ -81,6 +82,7 @@ export default function DynamicLayout() {
           event_detail: EventDetailWrapper,
           media_detail: ListenCardWrapper,
           event_map: EventMap,
+          viz_panel: VizPanelWraper,
         }}
         rightHeaderActionsComponent={RightControls}
       ></DockviewReact>

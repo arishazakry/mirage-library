@@ -30,7 +30,7 @@ export function defaultConfig(api, t) {
 
   api.addPanel({
     id: "panel_list_viz",
-    component: "default",
+    component: "viz_panel",
     title: t("list_viz"),
     position: { referencePanel: panel6 },
   });

@@ -114,11 +114,14 @@ const useStore = create((set) => {
         setLoading("fields", false);
       }
     },
-    requestVizdata: async (id) => {
+    requestVizdata: async (ids, filters) => {
       setLoading("vizdata", true);
       try {
-        const { data } = await axios.post(`${APIUrl}/meta/`, { id, viz: true });
-        set({ vizdata: data ?? [] });
+        const { data } = await axios.post(`${APIUrl}/meta/viz`, {
+          ids,
+          filters,
+        });
+        set({ vizdata: data?.data ?? [] });
         setLoading("vizdata", false);
       } catch (error) {
         //   set({ loading: false, error, hasError: true });

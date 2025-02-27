@@ -6,22 +6,22 @@ export function cn(...inputs) {
 }
 
 export const metricList = [
-  { key: "Track_SP_Danceability", label: "Danceability", radar: true },
-  { key: "Track_SP_Speechiness", label: "Speechiness", radar: true },
-  { key: "Track_SP_Acousticness", label: "Acousticness", radar: true },
-  { key: "Track_SP_Instrumentalness", label: "Instrumentalness", radar: true },
-  { key: "Track_SP_Liveness", label: "Liveness", radar: true },
-  { key: "Track_SP_Energy", label: "Energy" },
-  { key: "Track_SP_Valence", label: "Valence" },
-  { key: "Track_SP_Year", label: "Track Year Released" },
-  { key: "Track_SP_Popularity", label: "Track Popularity" },
-  { key: "Track_SP_Tempo", label: "Tempo" },
+  { key: "track_sp_danceability", label: "Danceability", radar: true },
+  { key: "track_sp_speechiness", label: "Speechiness", radar: true },
+  { key: "track_sp_acousticness", label: "Acousticness", radar: true },
+  { key: "track_sp_instrumentalness", label: "Instrumentalness", radar: true },
+  { key: "track_sp_liveness", label: "Liveness", radar: true },
+  { key: "track_sp_energy", label: "Energy" },
+  { key: "track_sp_valence", label: "Valence" },
+  { key: "track_sp_year", label: "Track Year Released" },
+  { key: "track_sp_popularity", label: "Track Popularity" },
+  { key: "track_sp_tempo", label: "Tempo" },
 ];
 
 export const metricRadarList = metricList.filter((d) => d.radar);
 
 export const rankMetricList = [
-  { key: "Artist_SP_Genre", label: "Artist Genres", isArray: true },
-  { key: "Artist_WD_Country", label: "Artist Country" },
-  { key: "Track_SP_Key", label: "Track Key", isArray: true },
+  { key: "artist_sp_genre", label: "Artist Genres", isArray: true },
+  { key: "artist_wd_country", label: "Artist Country" },
+  { key: "track_sp_key", label: "Track Key", isArray: true },
 ];

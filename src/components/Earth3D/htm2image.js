@@ -1,7 +1,7 @@
 const exportAsImage = async (el, imageFileName) => {
   // htmlToImage.toPng(el,{ cacheBust: true, })
   //     .then(function (dataUrl) {
-  //         debugger
+  //
   //         downloadImage(dataUrl, imageFileName);
   //     });
   // htmlToImage.toPng(select(el).select('canvas').node())

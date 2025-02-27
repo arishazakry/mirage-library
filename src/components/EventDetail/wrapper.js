@@ -39,7 +39,6 @@ export default function EventDetail({
   useEffect(() => {
     try {
       const _locsMap = {};
-      debugger;
       locs.forEach((d) => (_locsMap[d["location_rg_id"]] = d));
       const _locs = groups(events, (d) => d["location_rg_id"]).map(
         ([c, cou]) => ({

@@ -10,6 +10,5 @@ export default function EventMapWraper() {
     events,
     loading: { events: loadingEvents },
   } = useStore();
-  console.log(locs);
   return <EventMap currentDetail={detail} events={events} locs={locs} />;
 }

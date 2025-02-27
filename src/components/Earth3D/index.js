@@ -288,7 +288,6 @@ const Earth3D = forwardRef(
             onHexClick={(d) => {
               const location_rg_city = [];
               d.points.forEach((d) => {
-                debugger;
                 location_rg_city.push(d.location_rg_city);
               });
               onSelect({

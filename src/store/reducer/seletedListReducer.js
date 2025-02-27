@@ -17,7 +17,6 @@ export default (state = initialState, action) => {
         ...updateObjectInMap(state.items, state.currentList, action.payload),
       };
     case actionTypes.ADDS_TO_BASKET:
-      debugger;
       return {
         ...state,
         ...updateObjectsInMap(state.items, state.currentList, action.payload),

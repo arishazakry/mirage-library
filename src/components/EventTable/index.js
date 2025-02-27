@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from "react";
 import {
   MaterialReactTable,
   MRT_ToolbarAlertBanner,
@@ -26,6 +32,7 @@ const EventTable = ({
   highlightId,
   onSendToList,
   onRemoveFromList,
+  _id = "event_ma_id",
   mainurl,
 }) => {
   const [rowSelection, setRowSelection] = useState({});
@@ -73,7 +80,6 @@ const EventTable = ({
   //     });
   // };
   // console.log(data)
-
   return (
     <MaterialReactTable
       key={id}
@@ -110,10 +116,15 @@ const EventTable = ({
         sx: {
           cursor: "pointer",
           opacity: highlightId
-            ? highlightId._id === row.original._id
+            ? highlightId[_id] === row.original[_id]
               ? 1
               : 0.7
             : 1,
+          fontStyle: highlightId
+            ? highlightId[_id] === row.original[_id]
+              ? "italic"
+              : "normal"
+            : "normal",
         },
       })}
       muiSelectCheckboxProps={{ size: "small" }}
