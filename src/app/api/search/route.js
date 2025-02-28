@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import esClient from "../config/elasticsearch.js";
 import pgPool from "../config/postgresql.js";
 
 export const revalidate = 60;
@@ -31,13 +30,15 @@ export async function POST(req) {
       getQuery(sortBy, sortOrder, filters, query);
 
     const sql = `
-      SELECT e.*, 
-             l.location_rg_city AS location_rg_city, 
-             l.location_rg_country AS location_rg_country,
-             s.station_ar_genre AS station_ar_genre, 
-             s.station_rg_name AS station_rg_name,
-             t.track_sp_name AS track_sp_name, 
-             a.artist_sp_name AS artist_sp_name
+      SELECT e.event_ma_id,
+            e.event_ma_metadataReliability,
+            e.event_se_description,
+             l.location_rg_city , 
+             l.location_rg_country ,
+             s.station_ar_genre, 
+             s.station_rg_name,
+             t.track_sp_name, 
+             a.artist_sp_name
       FROM event e
       INNER JOIN location l ON e.location_rg_id = l.location_rg_id
       INNER JOIN station s ON e.station_rg_id = s.station_rg_id
