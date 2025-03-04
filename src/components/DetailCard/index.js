@@ -34,7 +34,7 @@ import RadarChart from "../RadarChart";
 import Map from "../Map";
 import Favorite from "@mui/icons-material/Favorite";
 import spotifyIcon from "@/assets/Spotify_icon.svg";
-import wikiIcon from ".@/assets/wikilogo.png";
+import wikiIcon from "@/assets/wikilogo.png";
 import musicbrainzIcon from "@/assets/musicbrainlogo.png";
 import youtubeIcon from "@/assets/youtubelogo.png";
 import geniusIcon from "@/assets/geniuslogo.png";
