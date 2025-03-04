@@ -33,11 +33,11 @@ import PaperCustom from "../PaperCustom";
 import RadarChart from "../RadarChart";
 import Map from "../Map";
 import Favorite from "@mui/icons-material/Favorite";
-import spotifyIcon from "../../assets/Spotify_icon.svg";
-import wikiIcon from "../../assets/wikilogo.png";
-import musicbrainzIcon from "../../assets/musicbrainlogo.png";
-import youtubeIcon from "../../assets/youtubelogo.png";
-import geniusIcon from "../../assets/geniuslogo.png";
+import spotifyIcon from "@/assets/Spotify_icon.svg";
+import wikiIcon from ".@/assets/wikilogo.png";
+import musicbrainzIcon from "@/assets/musicbrainlogo.png";
+import youtubeIcon from "@/assets/youtubelogo.png";
+import geniusIcon from "@/assets/geniuslogo.png";
 import { metricRadarList } from "@/lib/utils";
 
 const ExpandMore = styled((props) => {
@@ -114,11 +114,11 @@ function DetailCard({ data, onSelect, meanradar }) {
               <td>Station URL</td>
               <td>
                 <Link
-                  href={data.station_se_websiteURL}
+                  href={data.station_se_websiteurl}
                   target={"_blank"}
                   color={"secondary"}
                 >
-                  {data.station_se_websiteURL}
+                  {data.station_se_websiteurl}
                 </Link>
               </td>
             </tr>
@@ -183,7 +183,7 @@ function DetailCard({ data, onSelect, meanradar }) {
             </tr>
             <tr>
               <td>Description</td>
-              <td>{data.Station_SE_description}</td>
+              <td>{data.station_se_description}</td>
             </tr>
           </tbody>
         </table>
@@ -204,203 +204,199 @@ function DetailCard({ data, onSelect, meanradar }) {
           {/*<tr><td>Stream URL</td><td><Link href={data.stream_url} target={'_blank'} color={'secondary'}>{data.stream_url}</Link></td></tr>*/}
         </table>
       </PaperCustom>
-      {data.artist_info && (
-        <PaperCustom>
-          <Grid container spacing={1}>
-            <Grid item xs={12}>
-              <Box sx={{ flex: "1 0 auto", display: "flex" }}>
-                <Avatar
-                  aria-label="recipe"
-                  src={data.artist_sp_imageurl}
-                  sx={{ mr: 1 }}
-                >
-                  {data.artist_sp_name[0]}
-                </Avatar>
-                <div>
-                  <Typography variant="h4" color={"text.primary"}>
-                    {data.artist_sp_name}
-                  </Typography>
-                  <Typography variant="subtitle2">
-                    {data.artist_wd_type}
-                  </Typography>
-                </div>
-              </Box>
-              <Typography
-                component="div"
-                variant="subtitle1"
-                color="text.secondary"
+
+      <PaperCustom>
+        <Grid container spacing={1}>
+          <Grid item xs={12}>
+            <Box sx={{ flex: "1 0 auto", display: "flex" }}>
+              <Avatar
+                aria-label="recipe"
+                src={data.artist_sp_imageurl}
+                sx={{ mr: 1 }}
               >
-                {data.artist_wd_description}
-              </Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <table style={{ width: "100%" }}>
-                <colgroup>
-                  <col style={{ width: 130 }} />
-                  <col />
-                </colgroup>
-                <tbody>
-                  <tr>
-                    <td>Popularity</td>
-                    <td>
-                      <Chip
-                        icon={<Favorite />}
-                        sx={{ marginRight: 1 }}
-                        label={data.artist_sp_popularity}
-                        size={"small"}
-                      />
-                      ({format(",")(data.artist_sp_followers)} followers)
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>From</td>
-                    <td>{data.artist_wd_country ?? "N/A"}</td>
-                  </tr>
-                  <tr>
-                    <td>Genres</td>
-                    <td>
-                      {data.artist_sp_genre &&
-                        data.artist_sp_genre.map((t) => (
-                          <Chip key={t} label={t} size={"small"} />
-                        ))}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Instruments</td>
-                    <td>
-                      {data.artist_wd_instruments.map((t) => (
+                {data.artist_sp_name[0]}
+              </Avatar>
+              <div>
+                <Typography variant="h4" color={"text.primary"}>
+                  {data.artist_sp_name}
+                </Typography>
+                <Typography variant="subtitle2">
+                  {data.artist_wd_type}
+                </Typography>
+              </div>
+            </Box>
+            <Typography
+              component="div"
+              variant="subtitle1"
+              color="text.secondary"
+            >
+              {data.artist_wd_description}
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <table style={{ width: "100%" }}>
+              <colgroup>
+                <col style={{ width: 130 }} />
+                <col />
+              </colgroup>
+              <tbody>
+                <tr>
+                  <td>Popularity</td>
+                  <td>
+                    <Chip
+                      icon={<Favorite />}
+                      sx={{ marginRight: 1 }}
+                      label={data.artist_sp_popularity}
+                      size={"small"}
+                    />
+                    ({format(",")(data.artist_sp_followers)} followers)
+                  </td>
+                </tr>
+                <tr>
+                  <td>From</td>
+                  <td>{data.artist_wd_country ?? "N/A"}</td>
+                </tr>
+                <tr>
+                  <td>Genres</td>
+                  <td>
+                    {data.artist_sp_genre &&
+                      data.artist_sp_genre.map((t) => (
                         <Chip key={t} label={t} size={"small"} />
                       ))}
-                    </td>
-                  </tr>
-                  {data.artist_wd_members && data.artist_wd_members.length ? (
-                    <tr>
-                      <td>Members</td>
-                      <td>
-                        {data.artist_wd_members.map(
-                          ({
-                            _id,
-                            artist_sp_name,
-                            artist_sp_imageurl,
-                            artist_wd_genders,
-                            artist_wd_sexualorientations,
-                            artist_wd_ethnicities,
-                            artist_wd_voiceTypes,
-                          }) => (
-                            <Chip
-                              avatar={
-                                <Avatar
-                                  alt={artist_sp_name}
-                                  src={artist_sp_imageurl}
-                                />
-                              }
-                              key={_id}
-                              label={
-                                <>
-                                  <strong>{artist_sp_name}</strong>
-                                  {artist_wd_genders && (
-                                    <Chip
-                                      title={`Gender: ${artist_wd_genders}`}
-                                      color={"error"}
-                                      size={"small"}
-                                      {...genderIcon(artist_wd_genders)}
-                                    />
-                                  )}
-                                  {artist_wd_sexualorientations && (
-                                    <Chip
-                                      title={`Sexual Orientations: ${artist_wd_sexualorientations}`}
-                                      size={"small"}
-                                      {...genderIcon(
-                                        artist_wd_sexualorientations
-                                      )}
-                                    />
-                                  )}
-                                  {artist_wd_ethnicities && (
-                                    <Chip
-                                      title={`Ethnicities: ${artist_wd_ethnicities}`}
-                                      size={"small"}
-                                      {...genderIcon(artist_wd_ethnicities)}
-                                    />
-                                  )}
-                                  {artist_wd_voiceTypes &&
-                                  artist_wd_voiceTypes.length ? (
-                                    <Chip
-                                      title={"Voice types"}
-                                      label={artist_wd_voiceTypes.join(", ")}
-                                      size={"small"}
-                                    />
-                                  ) : (
-                                    ""
-                                  )}
-                                </>
-                              }
-                              variant={"outlined"}
-                            />
-                          )
-                        )}
-                      </td>
-                    </tr>
-                  ) : (
-                    ""
-                  )}
+                  </td>
+                </tr>
+                <tr>
+                  <td>Instruments</td>
+                  <td>
+                    {data.artist_wd_instruments.map((t) => (
+                      <Chip key={t} label={t} size={"small"} />
+                    ))}
+                  </td>
+                </tr>
+                {data.artist_wd_members && data.artist_wd_members.length ? (
                   <tr>
-                    <td>Website URL</td>
+                    <td>Members</td>
                     <td>
-                      <Link
-                        href={data.artist_wd_websiteurl}
-                        target={"_blank"}
-                        color={"secondary"}
-                      >
-                        {data.artist_wd_websiteurl}
-                      </Link>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Identifiers</td>
-                    <td>
-                      <IconButton
-                        href={`https://open.spotify.com/artist/${data.artist_sp_id}`}
-                        target={"_blank"}
-                      >
-                        <img src={spotifyIcon} width={30} loading="lazy" />
-                      </IconButton>
-                      {data.artist_wd_qid && (
-                        <IconButton
-                          href={`https://wikidata.org/wiki/${data.artist_wd_qid}`}
-                          target={"_blank"}
-                        >
-                          <img src={wikiIcon} width={30} loading="lazy" />
-                        </IconButton>
-                      )}
-                      {data.artist_wd_youtubeid && (
-                        <IconButton
-                          href={`https://www.youtube.com/channel/${data.artist_wd_youtubeid}`}
-                          target={"_blank"}
-                        >
-                          <img src={youtubeIcon} width={30} loading="lazy" />
-                        </IconButton>
-                      )}
-                      {data.artist_wd_musicbrainzid && (
-                        <IconButton
-                          href={`https://musicbrainz.org/artist/${data.artist_wd_musicbrainzid}`}
-                          target={"_blank"}
-                        >
-                          <img
-                            src={musicbrainzIcon}
-                            width={30}
-                            loading="lazy"
+                      {data.artist_wd_members.map(
+                        ({
+                          _id,
+                          artist_sp_name,
+                          artist_sp_imageurl,
+                          artist_wd_genders,
+                          artist_wd_sexualorientations,
+                          artist_wd_ethnicities,
+                          artist_wd_voiceTypes,
+                        }) => (
+                          <Chip
+                            avatar={
+                              <Avatar
+                                alt={artist_sp_name}
+                                src={artist_sp_imageurl}
+                              />
+                            }
+                            key={_id}
+                            label={
+                              <>
+                                <strong>{artist_sp_name}</strong>
+                                {artist_wd_genders && (
+                                  <Chip
+                                    title={`Gender: ${artist_wd_genders}`}
+                                    color={"error"}
+                                    size={"small"}
+                                    {...genderIcon(artist_wd_genders)}
+                                  />
+                                )}
+                                {artist_wd_sexualorientations && (
+                                  <Chip
+                                    title={`Sexual Orientations: ${artist_wd_sexualorientations}`}
+                                    size={"small"}
+                                    {...genderIcon(
+                                      artist_wd_sexualorientations
+                                    )}
+                                  />
+                                )}
+                                {artist_wd_ethnicities && (
+                                  <Chip
+                                    title={`Ethnicities: ${artist_wd_ethnicities}`}
+                                    size={"small"}
+                                    {...genderIcon(artist_wd_ethnicities)}
+                                  />
+                                )}
+                                {artist_wd_voiceTypes &&
+                                artist_wd_voiceTypes.length ? (
+                                  <Chip
+                                    title={"Voice types"}
+                                    label={artist_wd_voiceTypes.join(", ")}
+                                    size={"small"}
+                                  />
+                                ) : (
+                                  ""
+                                )}
+                              </>
+                            }
+                            variant={"outlined"}
                           />
-                        </IconButton>
+                        )
                       )}
                     </td>
                   </tr>
-                </tbody>
-                {/*<tr><td>Stream URL</td><td><Link href={data.stream_url} target={'_blank'} color={'secondary'}>{data.stream_url}</Link></td></tr>*/}
-              </table>
-            </Grid>
+                ) : (
+                  ""
+                )}
+                <tr>
+                  <td>Website URL</td>
+                  <td>
+                    <Link
+                      href={data.artist_wd_websiteurl}
+                      target={"_blank"}
+                      color={"secondary"}
+                    >
+                      {data.artist_wd_websiteurl}
+                    </Link>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Identifiers</td>
+                  <td>
+                    <IconButton
+                      href={`https://open.spotify.com/artist/${data.artist_sp_id}`}
+                      target={"_blank"}
+                    >
+                      <img src={spotifyIcon} width={30} loading="lazy" />
+                    </IconButton>
+                    {data.artist_wd_qid && (
+                      <IconButton
+                        href={`https://wikidata.org/wiki/${data.artist_wd_qid}`}
+                        target={"_blank"}
+                      >
+                        <img src={wikiIcon} width={30} loading="lazy" />
+                      </IconButton>
+                    )}
+                    {data.artist_wd_youtubeid && (
+                      <IconButton
+                        href={`https://www.youtube.com/channel/${data.artist_wd_youtubeid}`}
+                        target={"_blank"}
+                      >
+                        <img src={youtubeIcon} width={30} loading="lazy" />
+                      </IconButton>
+                    )}
+                    {data.artist_wd_musicbrainzid && (
+                      <IconButton
+                        href={`https://musicbrainz.org/artist/${data.artist_wd_musicbrainzid}`}
+                        target={"_blank"}
+                      >
+                        <img src={musicbrainzIcon} width={30} loading="lazy" />
+                      </IconButton>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+              {/*<tr><td>Stream URL</td><td><Link href={data.stream_url} target={'_blank'} color={'secondary'}>{data.stream_url}</Link></td></tr>*/}
+            </table>
           </Grid>
-        </PaperCustom>
-      )}
+        </Grid>
+      </PaperCustom>
+
       <PaperCustom elevation={3}>
         <Grid container spacing={1}>
           <Grid item xs={12}>

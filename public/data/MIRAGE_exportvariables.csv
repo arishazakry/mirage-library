@@ -25,9 +25,9 @@ station,Station_RG_name,Y
 station_id,Station_RG_ID,Y
 url,station_rg_url,Y
 station_name,Station_SE_name,Y
-station_description,Station_SE_description,Y
+station_description,station_se_description,Y
 station_genre,Station_AR_genre,Y
-station_se_websiteURL,station_se_websiteURL,Y
+station_se_websiteurl,station_se_websiteurl,Y
 language_code,Station_AR_languageCode,Y
 station_format,station_ar_format,Y
 station_form,station_ar_form,Y
