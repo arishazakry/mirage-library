@@ -445,11 +445,11 @@ function DetailCard({ data, onSelect, meanradar }) {
                 ) : (
                   ""
                 )}
-                {data.track_wd_Lyricists && data.track_wd_Lyricists.length ? (
+                {data.track_wd_lyricists && data.track_wd_lyricists.length ? (
                   <tr>
                     <td>Lyricists</td>
                     <td>
-                      {data.track_wd_Lyricists.map((t) => (
+                      {data.track_wd_lyricists.map((t) => (
                         <Chip key={t} label={t} size={"small"} />
                       ))}
                     </td>

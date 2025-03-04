@@ -94,7 +94,7 @@
   { "variable": "track_wd_language", "export": true },
   { "variable": "track_wd_year", "export": true },
   { "variable": "track_wd_composers", "export": true },
-  { "variable": "track_wd_Lyricists", "export": true },
+  { "variable": "track_wd_lyricists", "export": true },
   { "variable": "track_wd_geniusid", "export": true },
   { "variable": "track_wd_musicbrainzid", "export": true },
   { "variable": "track_wd_youtubeid", "export": true },

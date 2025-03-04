@@ -94,7 +94,7 @@ score_url,track_wd_ScoreURL,Y
 track_language,track_wd_language,Y
 track_yearreleased,track_wd_year,Y
 track_composers,track_wd_composers,Y
-track_lyricists,track_wd_Lyricists,Y
+track_lyricists,track_wd_lyricists,Y
 track_geniusID,track_wd_geniusid,Y
 track_musicbrainzid,track_wd_musicbrainzid,Y
 track_youtubeid,track_wd_youtubeid,Y
