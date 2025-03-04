@@ -38,8 +38,7 @@ export async function GET(req, context) {
           l.location_rg_country,
           l.location_rg_longitude,
           l.location_rg_latitude,
-          s.station_ar_genre,
-          s.station_rg_name,
+          s.*,
           t.*,
           a.*
         FROM event e
