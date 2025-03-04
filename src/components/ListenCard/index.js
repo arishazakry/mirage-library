@@ -53,31 +53,30 @@ function ListenCard({ data, onSelect }) {
               <Chip label={data.track_name_genre} size={"small"} />
             )}
           </Grid>
-          {data.artist_info && (
-            <Grid item>
-              <Box sx={{ flex: "1 0 auto", display: "flex" }}>
-                <Avatar
-                  aria-label="recipe"
-                  src={data.artist_info.artist_sp_imageurl}
-                  sx={{ mr: 1 }}
-                >
-                  {data.artist_info.artist_sp_name[0]}
-                </Avatar>
-                <div>
-                  <Typography variant="h5" color={"text.primary"}>
-                    {data.artist_info.artist_sp_name}
-                  </Typography>
-                  <Typography variant="subtitle2">
-                    from {data.artist_info.artist_wd_country ?? "N/A"}
-                  </Typography>
-                </div>
-              </Box>
-              {data.artist_info.artist_sp_genre &&
-                data.artist_info.artist_sp_genre.map((t) => (
-                  <Chip key={t} label={t} size={"small"} />
-                ))}
-            </Grid>
-          )}
+
+          <Grid item>
+            <Box sx={{ flex: "1 0 auto", display: "flex" }}>
+              <Avatar
+                aria-label="recipe"
+                src={data.artist_sp_imageurl}
+                sx={{ mr: 1 }}
+              >
+                {data.artist_sp_name[0]}
+              </Avatar>
+              <div>
+                <Typography variant="h5" color={"text.primary"}>
+                  {data.artist_sp_name}
+                </Typography>
+                <Typography variant="subtitle2">
+                  from {data.artist_wd_country ?? "N/A"}
+                </Typography>
+              </div>
+            </Box>
+            {data.artist_sp_genre &&
+              data.artist_sp_genre.map((t) => (
+                <Chip key={t} label={t} size={"small"} />
+              ))}
+          </Grid>
         </Grid>
       </PaperCustom>
       <PaperCustom>
