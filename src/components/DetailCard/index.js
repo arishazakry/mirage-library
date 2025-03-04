@@ -39,6 +39,7 @@ import musicbrainzIcon from "@/assets/musicbrainlogo.png";
 import youtubeIcon from "@/assets/youtubelogo.png";
 import geniusIcon from "@/assets/geniuslogo.png";
 import { metricRadarList } from "@/lib/utils";
+import Image from "next/image";
 
 const ExpandMore = styled((props) => {
   const { expand, ...other } = props;
@@ -362,14 +363,14 @@ function DetailCard({ data, onSelect, meanradar }) {
                       href={`https://open.spotify.com/artist/${data.artist_sp_id}`}
                       target={"_blank"}
                     >
-                      <img src={spotifyIcon} width={30} loading="lazy" />
+                      <Image src={spotifyIcon} width={30} loading="lazy" />
                     </IconButton>
                     {data.artist_wd_qid && (
                       <IconButton
                         href={`https://wikidata.org/wiki/${data.artist_wd_qid}`}
                         target={"_blank"}
                       >
-                        <img src={wikiIcon} width={30} loading="lazy" />
+                        <Image src={wikiIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
                     {data.artist_wd_youtubeid && (
@@ -377,7 +378,7 @@ function DetailCard({ data, onSelect, meanradar }) {
                         href={`https://www.youtube.com/channel/${data.artist_wd_youtubeid}`}
                         target={"_blank"}
                       >
-                        <img src={youtubeIcon} width={30} loading="lazy" />
+                        <Image src={youtubeIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
                     {data.artist_wd_musicbrainzid && (
@@ -385,7 +386,11 @@ function DetailCard({ data, onSelect, meanradar }) {
                         href={`https://musicbrainz.org/artist/${data.artist_wd_musicbrainzid}`}
                         target={"_blank"}
                       >
-                        <img src={musicbrainzIcon} width={30} loading="lazy" />
+                        <Image
+                          src={musicbrainzIcon}
+                          width={30}
+                          loading="lazy"
+                        />
                       </IconButton>
                     )}
                   </td>
@@ -517,7 +522,7 @@ function DetailCard({ data, onSelect, meanradar }) {
                         href={`https://open.spotify.com/track/${data.track_sp_id}`}
                         target={"_blank"}
                       >
-                        <img src={spotifyIcon} width={30} loading="lazy" />
+                        <Image src={spotifyIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
                     {data.track_wd_qid && (
@@ -525,7 +530,7 @@ function DetailCard({ data, onSelect, meanradar }) {
                         href={`https://wikidata.org/wiki/${data.track_wd_qid}`}
                         target={"_blank"}
                       >
-                        <img src={wikiIcon} width={30} loading="lazy" />
+                        <Image src={wikiIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
                     {data.track_wd_geniusid && (
@@ -533,7 +538,7 @@ function DetailCard({ data, onSelect, meanradar }) {
                         href={`https://genius.com/${data.track_wd_geniusid}`}
                         target={"_blank"}
                       >
-                        <img src={geniusIcon} width={30} loading="lazy" />
+                        <Image src={geniusIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
                     {data.track_wd_youtubeid && (
@@ -541,7 +546,7 @@ function DetailCard({ data, onSelect, meanradar }) {
                         href={`https://www.youtube.com/watch?v=${data.track_wd_youtubeid}`}
                         target={"_blank"}
                       >
-                        <img src={youtubeIcon} width={30} loading="lazy" />
+                        <Image src={youtubeIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
                     {data.track_wd_musicbrainzid && (
@@ -549,7 +554,11 @@ function DetailCard({ data, onSelect, meanradar }) {
                         href={`https://musicbrainz.org/work/${data.track_wd_musicbrainzid}`}
                         target={"_blank"}
                       >
-                        <img src={musicbrainzIcon} width={30} loading="lazy" />
+                        <Image
+                          src={musicbrainzIcon}
+                          width={30}
+                          loading="lazy"
+                        />
                       </IconButton>
                     )}
                   </td>
