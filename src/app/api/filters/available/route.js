@@ -220,10 +220,10 @@ export async function GET() {
 //         multi_match: {
 //           query,
 //           fields: [
-//             "Track_SP_Name^2",
-//             "Artist_SP_Name^2",
-//             "Track_WD_Language",
-//             "Artist_SP_Genre",
+//             "track_sp_name^2",
+//             "artist_sp_name^2",
+//             "track_wd_language",
+//             "artist_sp_genre",
 //           ],
 //         },
 //       });
@@ -258,7 +258,7 @@ export async function GET() {
 //           bool: { must },
 //         },
 //         size: 50,
-//         sort: [{ _score: "desc" }, { Track_SP_Popularity: "desc" }],
+//         sort: [{ _score: "desc" }, { track_sp_popularity: "desc" }],
 //       },
 //     });
 

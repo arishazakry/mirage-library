@@ -26,7 +26,7 @@ export default function Map({ locs, height, width, highlight }) {
       lat.push(d.lat);
       size.push(countriesScale(d?.count));
       text.push(`${d["title"]} (${d?.count})`);
-      // color.push((highlight&&(highlight.Location_RG_Country===d['title']))? 'red':_botColor);
+      // color.push((highlight&&(highlight.Location_RG_country===d['title']))? 'red':_botColor);
     });
     // console.log(highlight,color)
     let ticks = countriesScale.ticks(2);
@@ -106,7 +106,7 @@ export default function Map({ locs, height, width, highlight }) {
           lon: [_highlight.long],
           lat: [_highlight.lat],
           hoverinfo: "text",
-          text: [_highlight.Location_RG_Country],
+          text: [_highlight.Location_RG_country],
           showlegend: true,
           marker: {
             size: [countriesScale(_highlight.count)],
@@ -130,7 +130,7 @@ export default function Map({ locs, height, width, highlight }) {
     width: width,
     margin: { t: 10, r: 10, l: 10, b: 10 },
     geo3: {
-      // scope: highlight?highlight.Location_RG_Country.toLowerCase():'world',
+      // scope: highlight?highlight.Location_RG_country.toLowerCase():'world',
       // 'resolution': 50,
       showsubunits: true,
       subunitwidth: 1,

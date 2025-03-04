@@ -41,7 +41,7 @@ export default function Map({ locs, height, width, highlight }) {
           lat.push(d.lat);
           size.push(countriesScale(d?.count));
           text.push(`${d["title"]} (${d?.count})`);
-          // color.push((highlight&&(highlight.Location_RG_Country===d['title']))? 'red':_botColor);
+          // color.push((highlight&&(highlight.Location_RG_country===d['title']))? 'red':_botColor);
         });
         // console.log(highlight,color)
         let ticks = countriesScale.ticks(2);

@@ -64,8 +64,8 @@ function genderIcon(g) {
 
 function DetailCard({ data, onSelect, meanradar }) {
   const timeStation = moment(data.Event_MA_TimeStation).format("LLL");
-  const duration = moment.utc(data.Track_SP_Duration * 1000).format("HH:mm:ss");
-  const Event_SE_Description = data.Event_SE_Description ?? "N/A";
+  const duration = moment.utc(data.track_sp_duration * 1000).format("HH:mm:ss");
+  const event_se_description = data.event_se_description ?? "N/A";
   const analyticData = useMemo(() => [data], [data]);
   const analyticAxis = useMemo(() => metricRadarList, []);
 
@@ -82,7 +82,7 @@ function DetailCard({ data, onSelect, meanradar }) {
           {data.station_rg_name}
         </Typography>
         {/*<Typography component="div" variant="subtitle1" color="text.secondary">*/}
-        {/*    Form: <Chip label={data.Station_AR_Form} size={'small'}/>*/}
+        {/*    Form: <Chip label={data.station_ar_form} size={'small'}/>*/}
         {/*</Typography>*/}
         <table style={{ width: "100%" }}>
           <colgroup>
@@ -99,7 +99,7 @@ function DetailCard({ data, onSelect, meanradar }) {
                   flexWrap
                   sx={{ width: "100%", flexWrap: "wrap" }}
                 >
-                  <Chip label={data.Station_AR_Form} size={"small"} />
+                  <Chip label={data.station_ar_form} size={"small"} />
                   {data.station_ar_frequency && (
                     <>
                       {data.station_ar_frequency.map((d) => (
@@ -139,11 +139,11 @@ function DetailCard({ data, onSelect, meanradar }) {
               <td>Radio Garden URL</td>
               <td>
                 <Link
-                  href={data.Station_RG_URL}
+                  href={data.station_rg_url}
                   target={"_blank"}
                   color={"secondary"}
                 >
-                  {data.Station_RG_URL}
+                  {data.station_rg_url}
                 </Link>
               </td>
             </tr>
@@ -183,7 +183,7 @@ function DetailCard({ data, onSelect, meanradar }) {
             </tr>
             <tr>
               <td>Description</td>
-              <td>{data.Station_SE_Description}</td>
+              <td>{data.Station_SE_description}</td>
             </tr>
           </tbody>
         </table>
@@ -198,7 +198,7 @@ function DetailCard({ data, onSelect, meanradar }) {
           <tbody>
             <tr>
               <td>Stream name</td>
-              <td>{Event_SE_Description}</td>
+              <td>{event_se_description}</td>
             </tr>
           </tbody>
           {/*<tr><td>Stream URL</td><td><Link href={data.stream_url} target={'_blank'} color={'secondary'}>{data.stream_url}</Link></td></tr>*/}
@@ -211,17 +211,17 @@ function DetailCard({ data, onSelect, meanradar }) {
               <Box sx={{ flex: "1 0 auto", display: "flex" }}>
                 <Avatar
                   aria-label="recipe"
-                  src={data.artist_info.Artist_SP_ImageURL}
+                  src={data.artist_sp_imageurl}
                   sx={{ mr: 1 }}
                 >
-                  {data.artist_info.artist_sp_name[0]}
+                  {data.artist_sp_name[0]}
                 </Avatar>
                 <div>
                   <Typography variant="h4" color={"text.primary"}>
-                    {data.artist_info.artist_sp_name}
+                    {data.artist_sp_name}
                   </Typography>
                   <Typography variant="subtitle2">
-                    {data.artist_info.Artist_WD_Type}
+                    {data.artist_wd_type}
                   </Typography>
                 </div>
               </Box>
@@ -230,7 +230,7 @@ function DetailCard({ data, onSelect, meanradar }) {
                 variant="subtitle1"
                 color="text.secondary"
               >
-                {data.artist_info.Artist_WD_Description}
+                {data.artist_wd_description}
               </Typography>
             </Grid>
             <Grid item xs={12}>
@@ -246,22 +246,21 @@ function DetailCard({ data, onSelect, meanradar }) {
                       <Chip
                         icon={<Favorite />}
                         sx={{ marginRight: 1 }}
-                        label={data.artist_info.Artist_SP_Popularity}
+                        label={data.artist_sp_popularity}
                         size={"small"}
                       />
-                      ({format(",")(data.artist_info.Artist_SP_Followers)}{" "}
-                      followers)
+                      ({format(",")(data.artist_sp_followers)} followers)
                     </td>
                   </tr>
                   <tr>
                     <td>From</td>
-                    <td>{data.artist_info.Artist_WD_Country ?? "N/A"}</td>
+                    <td>{data.artist_wd_country ?? "N/A"}</td>
                   </tr>
                   <tr>
                     <td>Genres</td>
                     <td>
-                      {data.artist_info.Artist_SP_Genre &&
-                        data.artist_info.Artist_SP_Genre.map((t) => (
+                      {data.artist_sp_genre &&
+                        data.artist_sp_genre.map((t) => (
                           <Chip key={t} label={t} size={"small"} />
                         ))}
                     </td>
@@ -269,66 +268,65 @@ function DetailCard({ data, onSelect, meanradar }) {
                   <tr>
                     <td>Instruments</td>
                     <td>
-                      {data.artist_info.Artist_WD_Instruments.map((t) => (
+                      {data.artist_wd_instruments.map((t) => (
                         <Chip key={t} label={t} size={"small"} />
                       ))}
                     </td>
                   </tr>
-                  {data.artist_info.Artist_WD_Members &&
-                  data.artist_info.Artist_WD_Members.length ? (
+                  {data.artist_wd_members && data.artist_wd_members.length ? (
                     <tr>
                       <td>Members</td>
                       <td>
-                        {data.artist_info.Artist_WD_Members.map(
+                        {data.artist_wd_members.map(
                           ({
                             _id,
                             artist_sp_name,
-                            Artist_SP_ImageURL,
-                            Artist_WD_Genders,
-                            Artist_WD_SexualOrientations,
-                            Artist_WD_Ethnicities,
-                            Artist_WD_VoiceTypes,
+                            artist_sp_imageurl,
+                            artist_wd_genders,
+                            artist_wd_sexualorientations,
+                            artist_wd_ethnicities,
+                            artist_wd_voiceTypes,
                           }) => (
                             <Chip
                               avatar={
                                 <Avatar
                                   alt={artist_sp_name}
-                                  src={Artist_SP_ImageURL}
+                                  src={artist_sp_imageurl}
                                 />
                               }
                               key={_id}
                               label={
                                 <>
                                   <strong>{artist_sp_name}</strong>
-                                  {Artist_WD_Genders && (
+                                  {artist_wd_genders && (
                                     <Chip
-                                      title={`Gender: ${Artist_WD_Genders}`}
+                                      title={`Gender: ${artist_wd_genders}`}
                                       color={"error"}
                                       size={"small"}
-                                      {...genderIcon(Artist_WD_Genders)}
+                                      {...genderIcon(artist_wd_genders)}
                                     />
                                   )}
-                                  {Artist_WD_SexualOrientations && (
+                                  {artist_wd_sexualorientations && (
                                     <Chip
-                                      title={`Sexual Orientations: ${Artist_WD_SexualOrientations}`}
+                                      title={`Sexual Orientations: ${artist_wd_sexualorientations}`}
                                       size={"small"}
                                       {...genderIcon(
-                                        Artist_WD_SexualOrientations
+                                        artist_wd_sexualorientations
                                       )}
                                     />
                                   )}
-                                  {Artist_WD_Ethnicities && (
+                                  {artist_wd_ethnicities && (
                                     <Chip
-                                      title={`Ethnicities: ${Artist_WD_Ethnicities}`}
+                                      title={`Ethnicities: ${artist_wd_ethnicities}`}
                                       size={"small"}
-                                      {...genderIcon(Artist_WD_Ethnicities)}
+                                      {...genderIcon(artist_wd_ethnicities)}
                                     />
                                   )}
-                                  {Artist_WD_VoiceTypes &&
-                                  Artist_WD_VoiceTypes.length ? (
+                                  {artist_wd_voiceTypes &&
+                                  artist_wd_voiceTypes.length ? (
                                     <Chip
                                       title={"Voice types"}
-                                      label={Artist_WD_VoiceTypes.join(", ")}
+                                      label={artist_wd_voiceTypes.join(", ")}
                                       size={"small"}
                                     />
                                   ) : (
@@ -349,11 +347,11 @@ function DetailCard({ data, onSelect, meanradar }) {
                     <td>Website URL</td>
                     <td>
                       <Link
-                        href={data.artist_info.Artist_WD_WebsiteURL}
+                        href={data.artist_wd_websiteurl}
                         target={"_blank"}
                         color={"secondary"}
                       >
-                        {data.artist_info.Artist_WD_WebsiteURL}
+                        {data.artist_wd_websiteurl}
                       </Link>
                     </td>
                   </tr>
@@ -361,30 +359,30 @@ function DetailCard({ data, onSelect, meanradar }) {
                     <td>Identifiers</td>
                     <td>
                       <IconButton
-                        href={`https://open.spotify.com/artist/${data.artist_info.Artist_SP_ID}`}
+                        href={`https://open.spotify.com/artist/${data.artist_sp_id}`}
                         target={"_blank"}
                       >
                         <img src={spotifyIcon} width={30} loading="lazy" />
                       </IconButton>
-                      {data.artist_info.Artist_WD_QID && (
+                      {data.artist_wd_qid && (
                         <IconButton
-                          href={`https://wikidata.org/wiki/${data.artist_info.Artist_WD_QID}`}
+                          href={`https://wikidata.org/wiki/${data.artist_wd_qid}`}
                           target={"_blank"}
                         >
                           <img src={wikiIcon} width={30} loading="lazy" />
                         </IconButton>
                       )}
-                      {data.artist_info.Artist_WD_YouTubeID && (
+                      {data.artist_wd_youtubeid && (
                         <IconButton
-                          href={`https://www.youtube.com/channel/${data.artist_info.Artist_WD_YouTubeID}`}
+                          href={`https://www.youtube.com/channel/${data.artist_wd_youtubeid}`}
                           target={"_blank"}
                         >
                           <img src={youtubeIcon} width={30} loading="lazy" />
                         </IconButton>
                       )}
-                      {data.artist_info.Artist_WD_MusicBrainzID && (
+                      {data.artist_wd_musicbrainzid && (
                         <IconButton
-                          href={`https://musicbrainz.org/artist/${data.artist_info.Artist_WD_MusicBrainzID}`}
+                          href={`https://musicbrainz.org/artist/${data.artist_wd_musicbrainzid}`}
                           target={"_blank"}
                         >
                           <img
@@ -425,7 +423,7 @@ function DetailCard({ data, onSelect, meanradar }) {
               variant="subtitle1"
               color="text.secondary"
             >
-              {data.Track_WD_Desciption}
+              {data.track_wd_desciption}
             </Typography>
             <table style={{ width: "100%" }}>
               <colgroup>
@@ -433,17 +431,17 @@ function DetailCard({ data, onSelect, meanradar }) {
                 <col />
               </colgroup>
               <tbody>
-                {data.Track_WD_Format && (
+                {data.track_wd_Format && (
                   <tr>
                     <td>Form</td>
-                    <td>{data.Track_WD_Format}</td>
+                    <td>{data.track_wd_Format}</td>
                   </tr>
                 )}
-                {data.Track_WD_Composers && data.Track_WD_Composers.length ? (
+                {data.track_wd_composers && data.track_wd_composers.length ? (
                   <tr>
                     <td>Composers</td>
                     <td>
-                      {data.Track_WD_Composers.map((t) => (
+                      {data.track_wd_composers.map((t) => (
                         <Chip key={t} label={t} size={"small"} />
                       ))}
                     </td>
@@ -451,11 +449,11 @@ function DetailCard({ data, onSelect, meanradar }) {
                 ) : (
                   ""
                 )}
-                {data.Track_WD_Lyricists && data.Track_WD_Lyricists.length ? (
+                {data.track_wd_Lyricists && data.track_wd_Lyricists.length ? (
                   <tr>
                     <td>Lyricists</td>
                     <td>
-                      {data.Track_WD_Lyricists.map((t) => (
+                      {data.track_wd_Lyricists.map((t) => (
                         <Chip key={t} label={t} size={"small"} />
                       ))}
                     </td>
@@ -463,31 +461,31 @@ function DetailCard({ data, onSelect, meanradar }) {
                 ) : (
                   ""
                 )}
-                {data.Track_WD_Language && (
+                {data.track_wd_language && (
                   <tr>
                     <td>Language</td>
-                    <td>{data.Track_WD_Language}</td>
+                    <td>{data.track_wd_language}</td>
                   </tr>
                 )}
-                {data.Track_SP_Year && (
+                {data.track_sp_year && (
                   <tr>
                     <td>Year released</td>
-                    <td>{data.Track_SP_Year}</td>
+                    <td>{data.track_sp_year}</td>
                   </tr>
                 )}
-                {data.Track_SP_Duration && (
+                {data.track_sp_duration && (
                   <tr>
                     <td>Duration</td>
                     <td>{duration}</td>
                   </tr>
                 )}
-                {data.Track_SP_Popularity && (
+                {data.track_sp_popularity && (
                   <tr>
                     <td>Popularity</td>
                     <td>
                       <Chip
                         icon={<Favorite />}
-                        label={data.Track_SP_Popularity}
+                        label={data.track_sp_popularity}
                         size={"small"}
                       />
                     </td>
@@ -496,12 +494,12 @@ function DetailCard({ data, onSelect, meanradar }) {
                 <tr>
                   <td>Key </td>
                   <td>
-                    {data.Track_SP_Key}, {data.Track_SP_Mode}
+                    {data.track_sp_Key}, {data.track_sp_mode}
                   </td>
                 </tr>
                 <tr>
                   <td>Beats per Measure</td>
-                  <td>{data.Track_SP_BeatsPerBar}</td>
+                  <td>{data.track_sp_BeatsPerBar}</td>
                 </tr>
                 {data.track_genre && (
                   <tr>
@@ -509,50 +507,50 @@ function DetailCard({ data, onSelect, meanradar }) {
                     <td>{data.track_genre}</td>
                   </tr>
                 )}
-                {data.Track_SP_Loudness && (
+                {data.track_sp_loudness && (
                   <tr>
                     <td>Loudness</td>
-                    <td>{data.Track_SP_Loudness} dB</td>
+                    <td>{data.track_sp_loudness} dB</td>
                   </tr>
                 )}
                 <tr>
                   <td>Platform</td>
                   <td>
-                    {data.Track_SP_ID && (
+                    {data.track_sp_id && (
                       <IconButton
-                        href={`https://open.spotify.com/track/${data.Track_SP_ID}`}
+                        href={`https://open.spotify.com/track/${data.track_sp_id}`}
                         target={"_blank"}
                       >
                         <img src={spotifyIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
-                    {data.Track_WD_QID && (
+                    {data.track_wd_qid && (
                       <IconButton
-                        href={`https://wikidata.org/wiki/${data.Track_WD_QID}`}
+                        href={`https://wikidata.org/wiki/${data.track_wd_qid}`}
                         target={"_blank"}
                       >
                         <img src={wikiIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
-                    {data.Track_WD_GeniusID && (
+                    {data.track_wd_geniusid && (
                       <IconButton
-                        href={`https://genius.com/${data.Track_WD_GeniusID}`}
+                        href={`https://genius.com/${data.track_wd_geniusid}`}
                         target={"_blank"}
                       >
                         <img src={geniusIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
-                    {data.Track_WD_YouTubeID && (
+                    {data.track_wd_youtubeid && (
                       <IconButton
-                        href={`https://www.youtube.com/watch?v=${data.Track_WD_YouTubeID}`}
+                        href={`https://www.youtube.com/watch?v=${data.track_wd_youtubeid}`}
                         target={"_blank"}
                       >
                         <img src={youtubeIcon} width={30} loading="lazy" />
                       </IconButton>
                     )}
-                    {data.Track_WD_MusicBrainzID && (
+                    {data.track_wd_musicbrainzid && (
                       <IconButton
-                        href={`https://musicbrainz.org/work/${data.Track_WD_MusicBrainzID}`}
+                        href={`https://musicbrainz.org/work/${data.track_wd_musicbrainzid}`}
                         target={"_blank"}
                       >
                         <img src={musicbrainzIcon} width={30} loading="lazy" />
@@ -564,8 +562,8 @@ function DetailCard({ data, onSelect, meanradar }) {
             </table>
           </Grid>
           <Grid item xs={12}>
-            {data.Track_WD_Instrumentation &&
-            data.Track_WD_Instrumentation.length ? (
+            {data.track_wd_instrumentation &&
+            data.track_wd_instrumentation.length ? (
               <Stack
                 direction={"row"}
                 spacing={1}
@@ -573,7 +571,7 @@ function DetailCard({ data, onSelect, meanradar }) {
                 sx={{ width: "100%", flexWrap: "wrap" }}
               >
                 <Typography>Instruments: </Typography>
-                {data.Track_WD_Instrumentation.map((t) => (
+                {data.track_wd_instrumentation.map((t) => (
                   <Chip key={t} label={t} size={"small"} />
                 ))}
               </Stack>
@@ -611,7 +609,7 @@ function DetailCard({ data, onSelect, meanradar }) {
           {/*    <Grid container>*/}
           {/*        <Divider sx={{mt: 2, mb: 2, flexGrow: 1}}/>*/}
           {/*        <Typography variant={"h5"} component={'div'} sx={{margin: 'auto'}}>*/}
-          {/*            Lyrics {data.Track_WD_Language ? `(${data.Track_WD_Language})` : ""}*/}
+          {/*            Lyrics {data.track_wd_language ? `(${data.track_wd_language})` : ""}*/}
           {/*        </Typography>*/}
           {/*        <Divider sx={{mt: 2, mb: 2, flexGrow: 1}}/>*/}
           {/*    </Grid>*/}

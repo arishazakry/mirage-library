@@ -65,31 +65,31 @@ export const fieldsWithoutSelected = fields.filter((d, i) => i);
 export const filterSearch = [
   ...fields.filter((f) => !f.filterDisable),
   {
-    accessorKey: "Artist_WD_Country",
+    accessorKey: "artist_wd_country",
     header: "Artist Country ",
     cat: "artist",
     dynamic: true,
   },
   {
-    accessorKey: "Artist_SP_Genre",
+    accessorKey: "artist_sp_genre",
     header: "Artist Genre ",
     cat: "artist",
     dynamic: true,
   },
   {
-    accessorKey: "Artist_WD_Genders",
+    accessorKey: "artist_wd_genders",
     header: "Artist Gender",
     cat: "artist",
     dynamic: true,
   },
   {
-    accessorKey: "Artist_WD_SexualOrientations",
+    accessorKey: "artist_wd_sexualorientations",
     header: "Artist Sexualorientations ",
     cat: "artist",
     dynamic: true,
   },
   {
-    accessorKey: "Artist_WD_Ethnicities",
+    accessorKey: "artist_wd_ethnicities",
     header: "Artist Ethnicities ",
     cat: "artist",
     dynamic: true,

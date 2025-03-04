@@ -36,12 +36,12 @@ function ListenCard({ data, onSelect }) {
               variant="h4"
               component="div"
               onClick={
-                data.Track_SP_Name
-                  ? () => onSelect({ Track_SP_Name: [data.Track_SP_Name] })
+                data.track_sp_name
+                  ? () => onSelect({ track_sp_name: [data.track_sp_name] })
                   : null
               }
             >
-              {data.Track_SP_Name}
+              {data.track_sp_name}
             </Typography>
             {data.year_released && (
               <Typography color="text.secondary" gutterBottom>
@@ -58,22 +58,22 @@ function ListenCard({ data, onSelect }) {
               <Box sx={{ flex: "1 0 auto", display: "flex" }}>
                 <Avatar
                   aria-label="recipe"
-                  src={data.artist_info.Artist_SP_ImageURL}
+                  src={data.artist_info.artist_sp_imageurl}
                   sx={{ mr: 1 }}
                 >
-                  {data.artist_info.Artist_SP_Name[0]}
+                  {data.artist_info.artist_sp_name[0]}
                 </Avatar>
                 <div>
                   <Typography variant="h5" color={"text.primary"}>
-                    {data.artist_info.Artist_SP_Name}
+                    {data.artist_info.artist_sp_name}
                   </Typography>
                   <Typography variant="subtitle2">
-                    from {data.artist_info.Artist_WD_Country ?? "N/A"}
+                    from {data.artist_info.artist_wd_country ?? "N/A"}
                   </Typography>
                 </div>
               </Box>
-              {data.artist_info.Artist_SP_Genre &&
-                data.artist_info.Artist_SP_Genre.map((t) => (
+              {data.artist_info.artist_sp_genre &&
+                data.artist_info.artist_sp_genre.map((t) => (
                   <Chip key={t} label={t} size={"small"} />
                 ))}
             </Grid>
@@ -96,14 +96,14 @@ function ListenCard({ data, onSelect }) {
           <Grid item xs={12}>
             <iframe
               loading="lazy"
-              src={`https://open.spotify.com/embed/track/${data.Track_SP_ID}`}
+              src={`https://open.spotify.com/embed/track/${data.track_sp_id}`}
               width={"100%"}
               height="80"
               frameBorder="0"
               data-mce-fragment="1"
             ></iframe>
           </Grid>
-          {(data.spotify_uri || data.Track_WD_YouTubeID) && (
+          {(data.spotify_uri || data.track_wd_youtubeid) && (
             <>
               {data.spotify_uri && (
                 <Grid item xs={12}>
@@ -120,13 +120,13 @@ function ListenCard({ data, onSelect }) {
                   ></iframe>
                 </Grid>
               )}
-              {data.Track_WD_YouTubeID && (
+              {data.track_wd_youtubeid && (
                 <Grid item xs={12}>
                   <iframe
                     width={"100%"}
                     height={"auto"}
                     loading="lazy"
-                    src={`https://www.youtube-nocookie.com/embed/${data.Track_WD_YouTubeID}`}
+                    src={`https://www.youtube-nocookie.com/embed/${data.track_wd_youtubeid}`}
                     title="YouTube video player"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
