@@ -46,7 +46,8 @@ export async function GET(req, context) {
         INNER JOIN location l ON e.location_rg_id = l.location_rg_id
         INNER JOIN station s ON e.station_rg_id = s.station_rg_id
         INNER JOIN track t ON e.track_sp_id = t.track_sp_id
-        LEFT JOIN artist a ON e.artist_sp_id = a.artist_sp_id
+        LEFT JOIN track_artist ta ON t.track_sp_id = ta.track_sp_id
+        LEFT JOIN artist a ON ta.artist_sp_id = a.artist_sp_id
         WHERE e.event_ma_id = $1
       `;
     client = await pgPool.connect();
