@@ -495,12 +495,12 @@ function DetailCard({ data, onSelect, meanradar }) {
                 <tr>
                   <td>Key </td>
                   <td>
-                    {data.track_sp_Key}, {data.track_sp_mode}
+                    {data.track_sp_key}, {data.track_sp_mode}
                   </td>
                 </tr>
                 <tr>
                   <td>Beats per Measure</td>
-                  <td>{data.track_sp_BeatsPerBar}</td>
+                  <td>{data.track_sp_beatsperbar}</td>
                 </tr>
                 {data.track_genre && (
                   <tr>

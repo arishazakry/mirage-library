@@ -40,7 +40,6 @@ export default function EventList() {
     [requestEvents] // Dependency ensures it's stable across renders
   );
   useEffect(() => {
-    console.log(JSON.stringify(filters));
     fetchEvents(filters);
   }, [fetchEvents, filters]);
   return (

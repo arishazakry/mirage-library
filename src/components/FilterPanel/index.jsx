@@ -12,7 +12,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -269,14 +271,29 @@ const AdvancedFilter = () => {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        <div className="relative flex-1">
+        <div className="relative flex">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
+            className="pl-8 pr-[104px] py-4"
           />
+          <Select>
+            <SelectTrigger className="absolute right-0 top-0 w-[100px]">
+              <SelectValue placeholder="*" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Search Category</SelectLabel>
+                <SelectItem value="artist_sp_name">Artist</SelectItem>
+                <SelectItem value="track_sp_name">Track</SelectItem>
+                <SelectItem value="station_ar_genre">Genre</SelectItem>
+                <SelectItem value="event_ma_id">Event ID</SelectItem>
+                <SelectItem value="common">*</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
         <Button
           variant="outline"
@@ -284,7 +301,7 @@ const AdvancedFilter = () => {
           onClick={() => setIsFilterDialogOpen(true)}
         >
           <Filter className="h-4 w-4" />
-          Filters ({Object.keys(activeFilters).length})
+          Advance Search ({Object.keys(activeFilters).length})
         </Button>
       </div>
 

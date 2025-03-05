@@ -9,7 +9,6 @@ import { setFilters } from "@/store/reducer/streamfilters";
 export default function EarthView() {
   const {
     locs,
-    detail,
     countries,
     loading: { events: loadingEvents },
   } = useStore();

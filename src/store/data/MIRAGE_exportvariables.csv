@@ -53,9 +53,9 @@ track_year_released,track_sp_year,N
 track_popularity,track_sp_popularity,N
 track_loudness,track_sp_loudness,N
 track_tempo,track_sp_Tempo,N
-track_key,track_sp_Key,N
+track_key,track_sp_key,N
 track_mode,track_sp_mode,N
-track_beatsperbar,track_sp_BeatsPerBar,N
+track_beatsperbar,track_sp_beatsperbar,N
 track_danceability,track_sp_Danceability,N
 track_speechiness,track_sp_Speechiness,N
 track_sp_Acousticness,track_sp_Acousticness,N

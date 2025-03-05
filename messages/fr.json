@@ -3,7 +3,8 @@
     "about": "About Mirage",
     "welcome_message": "Bienvenue au Projet Mirage",
     "description": "MirageOS est un système d'exploitation de bibliothèque qui construit des unikernels pour des applications réseau sécurisées et haute performance.",
-    "learn_more": "En savoir plus"
+    "learn_more": "En savoir plus",
+    "langue": "Langue"
   },
   "Dashboard": {
     "earth_view": "Terre",

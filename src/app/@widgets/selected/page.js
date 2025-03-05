@@ -18,15 +18,9 @@ export default function EventSelectedList() {
   const filters = useSelector(selectFilters);
   const dispatch = useDispatch();
 
-  // useEffect(() => {
-  //   dispatch(actionCreators.newList(events));
-  // }, [events]);
-
   const eventTotalData = useSelector((state) => state.seletedList.currentList);
-  const _eventSelectedData = useSelector((state) => state.seletedList.items);
-  const eventSelectedData = useMemo(
-    () => Array.from(_eventSelectedData.values()),
-    [_eventSelectedData]
+  const eventSelectedData = useSelector((state) =>
+    Array.from(state.seletedList.items.values())
   );
 
   const onSelectStream = useCallback(
@@ -35,13 +29,6 @@ export default function EventSelectedList() {
     },
     [requestDetail]
   );
-  // const fetchEvents = useCallback(
-  //   (filter) => requestEvents(filter, 10000),
-  //   [requestEvents] // Dependency ensures it's stable across renders
-  // );
-  // useEffect(() => {
-  //   fetchEvents(filters);
-  // }, [fetchEvents, filters]);
   return (
     <EventTable
       id="eventSelectedListTable"
