@@ -6,12 +6,15 @@ import useStore from "@/store/strore"; // Zustand store
 import { actionCreators } from "@/store/reducer/actions/selectedList";
 import EventTable from "@/components/EventTable";
 import { selectFilters } from "@/store/reducer/streamfilters";
-
+import EventTableDynamic from "@/components/EventTableDynamic";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+const queryClient = new QueryClient();
 export default function EventList() {
   const {
     detail,
     requestDetail,
     requestEvents,
+    query,
     events,
     loading: { events: loadingEvents },
   } = useStore();
@@ -36,25 +39,42 @@ export default function EventList() {
     [requestDetail]
   );
   const fetchEvents = useCallback(
-    (filter) => requestEvents(filter, 10000),
+    (filter, query) => requestEvents(filter, query, 10000),
     [requestEvents] // Dependency ensures it's stable across renders
   );
-  useEffect(() => {
-    fetchEvents(filters);
-  }, [fetchEvents, filters]);
+  // useEffect(() => {
+  //   fetchEvents(filters, query);
+  // }, [fetchEvents, filters, query]);
+  console.log("EVEnt table");
   return (
-    <EventTable
-      id="eventListTable"
-      data={eventTotalData ?? []}
-      columns={fields}
-      isLoadingData={loadingEvents}
-      onSelectRow={onSelectStream}
-      highlightId={detail}
-      totalData={eventTotalData}
-      selectedData={eventSelectedData}
-      onSendToList={(l) => dispatch(actionCreators.addsToBasket(l))}
-      onRemoveFromList={(l) => dispatch(actionCreators.removeItems(l))}
-      mainurl={`${window.location.origin}/`}
-    />
+    // <EventTable
+    //   id="eventListTable"
+    //   data={eventTotalData ?? []}
+    //   columns={fields}
+    //   isLoadingData={loadingEvents}
+    //   onSelectRow={onSelectStream}
+    //   highlightId={detail}
+    //   totalData={eventTotalData}
+    //   selectedData={eventSelectedData}
+    //   onSendToList={(l) => dispatch(actionCreators.addsToBasket(l))}
+    //   onRemoveFromList={(l) => dispatch(actionCreators.removeItems(l))}
+    //   mainurl={`${window.location.origin}/`}
+    // />
+    <QueryClientProvider client={queryClient}>
+      <EventTableDynamic
+        id="eventListTable"
+        columns={fields}
+        isLoadingData={loadingEvents}
+        onSelectRow={onSelectStream}
+        highlightId={detail}
+        // totalData={eventTotalData}
+        selectedData={eventSelectedData}
+        onSendToList={(l) => dispatch(actionCreators.addsToBasket(l))}
+        onRemoveFromList={(l) => dispatch(actionCreators.removeItems(l))}
+        mainurl={`${window.location.origin}/`}
+        filters={filters}
+        query={query}
+      />
+    </QueryClientProvider>
   );
 }

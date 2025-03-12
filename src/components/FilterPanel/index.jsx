@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Search, Filter, X } from "lucide-react";
 import {
   Dialog,
@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FilterSliderWrapper from "../FilterSliderWrapper";
 import AutocompleteInput from "../AutocompleteInput";
 import AutocompleteInputWrapper from "../AutocompleteInputWrapper";
+import useStore from "@/store/strore";
 
 const CATEGORIES = {
   location: "Location",
@@ -189,9 +190,17 @@ const FilterDialog = ({
 
 const AdvancedFilter = () => {
   const dispatch = useDispatch();
+
+  const {
+    setQuery,
+    query,
+    loading: { events: loadingEvents },
+  } = useStore();
+
   const activeFilters = useSelector(selectFilters);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(query?.value ?? "");
+  const [searchQueryCat, setSearchQueryCat] = useState(query?.key ?? "*");
   const [availableFilters, setAvailableFilters] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
@@ -268,6 +277,11 @@ const AdvancedFilter = () => {
       </Badge>
     );
   };
+
+  useEffect(() => {
+    if (searchQuery && searchQuery.length)
+      setQuery({ key: searchQueryCat, value: searchQuery });
+  }, [searchQuery, searchQueryCat]);
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
@@ -276,10 +290,12 @@ const AdvancedFilter = () => {
           <Input
             placeholder="Search..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+            }}
             className="pl-8 pr-[104px] py-4"
           />
-          <Select>
+          <Select value={searchQueryCat} onValueChange={setSearchQueryCat}>
             <SelectTrigger className="absolute right-0 top-0 w-[100px]">
               <SelectValue placeholder="*" />
             </SelectTrigger>
@@ -290,7 +306,7 @@ const AdvancedFilter = () => {
                 <SelectItem value="track_sp_name">Track</SelectItem>
                 <SelectItem value="station_ar_genre">Genre</SelectItem>
                 <SelectItem value="event_ma_id">Event ID</SelectItem>
-                <SelectItem value="common">*</SelectItem>
+                <SelectItem value="*">*</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>

@@ -11,8 +11,6 @@ export default function EventSelectedList() {
   const {
     detail,
     requestDetail,
-    // requestEvents,
-    // events,
     loading: { events: loadingEvents },
   } = useStore();
   const filters = useSelector(selectFilters);

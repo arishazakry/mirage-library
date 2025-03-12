@@ -41,6 +41,7 @@ const useStore = create((set) => {
     loading: {},
     error: false,
     isInit: false,
+    query: {},
     getLoading: (path) => (state) => state.loading?.[path] || false,
     setLoading,
     setError: (path, error) =>
@@ -128,11 +129,12 @@ const useStore = create((set) => {
         setLoading("vizdata", false);
       }
     },
-    requestEvents: async (filters, size, isid) => {
+    requestEvents: async (filters, query, size, isid) => {
       setLoading("events", true);
       try {
         const { data } = await axios.post(`${APIUrl}/search/`, {
           filters,
+          query,
           size,
         });
         set({ events: data?.data ?? [] });
@@ -182,6 +184,7 @@ const useStore = create((set) => {
         .post(`${APIUrl}/url/`, { data: compressed })
         .then(({ data }) => HOMEURL + "?selected=" + data._id);
     },
+    setQuery: (newData) => set({ query: newData }),
   };
 });
 

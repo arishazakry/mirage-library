@@ -24,7 +24,6 @@ export async function POST(req) {
       sortBy,
       sortOrder = "ASC",
     } = body;
-
     // Allowed columns for sorting (to prevent SQL injection)
     var { whereClause, searchClause, orderClause, valueIndex, values } =
       getQuery(sortBy, sortOrder, filters, query);
@@ -52,12 +51,25 @@ export async function POST(req) {
       ${orderClause}
       LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
     `;
+    // , COUNT(*) OVER() AS total_count
+    const countSql = `
+  SELECT COUNT(*) AS total_count
+  FROM event e
+  INNER JOIN location l ON e.location_rg_id = l.location_rg_id
+  INNER JOIN station s ON e.station_rg_id = s.station_rg_id
+  INNER JOIN track t ON e.track_sp_id = t.track_sp_id
+  LEFT JOIN artist a ON e.artist_sp_id = a.artist_sp_id
+  ${whereClause} ${searchClause}
+`;
 
     values.push(size, from);
+    console.log(sql);
     client = await pgPool.connect();
     const { rows } = await client.query(sql, values);
-
-    return NextResponse.json({ data: rows });
+    const countResult = await client.query(countSql, values.slice(0, -2));
+    // const totalRowCount = rows.length > 0 ? rows[0].total_count : 0;
+    const totalRowCount = countResult.rows[0].total_count;
+    return NextResponse.json({ data: rows, meta: { totalRowCount } });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   } finally {
@@ -86,9 +98,10 @@ export function getQuery(sortBy, sortOrder, filters, query) {
   let whereClauses = [];
   let values = [];
   let valueIndex = 1;
+  console.log(filters);
   if (filters && Object.keys(filters).length > 0) {
     for (const [key, filter] of Object.entries(filters)) {
-      if ("value" in filter) {
+      if (filter && typeof filter === "object" && "value" in filter) {
         if ("mode" in filter && filter.mode === "lower") {
           // Handle range filter (e.g., artist_sp_followers with "lower" mode)
           whereClauses.push(`${key} >= $${valueIndex}`);
@@ -115,19 +128,30 @@ export function getQuery(sortBy, sortOrder, filters, query) {
           whereClauses.push(`${key} = $${valueIndex}`);
           values.push(filter.value);
         }
+        valueIndex++;
       }
-      valueIndex++;
     }
   }
 
   let searchClause = "";
-  if (query) {
-    searchClause = `AND (e.name ILIKE $${valueIndex} OR e.description ILIKE $${valueIndex})`;
-    values.push(`%${query}%`);
+  if (query && query.value && query.key) {
+    if (query.key == "*") {
+      searchClause = `AND (a.artist_sp_name ILIKE $${valueIndex} OR t.track_sp_name ILIKE $${valueIndex} OR $${valueIndex} ILIKE ANY(s.station_ar_genre) OR e.event_ma_id ILIKE $${valueIndex})`;
+    } else {
+      if (query.key === "station_ar_genre")
+        searchClause = `AND ($${valueIndex} ILIKE ANY(s.station_ar_genre))`;
+      else
+        searchClause = `AND (${query.key[0]}.${query.key} ILIKE $${valueIndex})`;
+    }
+    values.push(`%${query.value}%`);
     valueIndex++;
   }
 
-  const whereClause =
+  let whereClause =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+  if (!whereClauses.length && searchClause.length) {
+    whereClause = "WHERE ";
+    searchClause = searchClause.slice(4, searchClause.length);
+  }
   return { whereClause, searchClause, orderClause, valueIndex, values };
 }
