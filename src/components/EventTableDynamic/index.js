@@ -96,7 +96,7 @@ const EventTableDynamic = ({
     key: id,
     id: id,
     columns: columns,
-    pagination: { ...pagination },
+    pagination,
     data: data, //10,000 rows
     enableGlobalFilterModes: true,
     enableDensityToggle: false,

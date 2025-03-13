@@ -136,10 +136,18 @@ export function getQuery(sortBy, sortOrder, filters, query) {
   let searchClause = "";
   if (query && query.value && query.key) {
     if (query.key == "*") {
-      searchClause = `AND (a.artist_sp_name ILIKE $${valueIndex} OR t.track_sp_name ILIKE $${valueIndex} OR $${valueIndex} ILIKE ANY(s.station_ar_genre) OR e.event_ma_id ILIKE $${valueIndex})`;
+      searchClause = `AND (a.artist_sp_name ILIKE $${valueIndex} OR t.track_sp_name ILIKE $${valueIndex} OR (${get_query_array(
+        valueIndex,
+        "s.station_ar_genre",
+        "station_ar_genre"
+      )}) OR e.event_ma_id ILIKE $${valueIndex})`;
     } else {
       if (query.key === "station_ar_genre")
-        searchClause = `AND ($${valueIndex} ILIKE ANY(s.station_ar_genre))`;
+        searchClause = `AND (${get_query_array(
+          valueIndex,
+          "s.station_ar_genre",
+          "station_ar_genre"
+        )})`;
       else
         searchClause = `AND (${query.key[0]}.${query.key} ILIKE $${valueIndex})`;
     }
@@ -154,4 +162,12 @@ export function getQuery(sortBy, sortOrder, filters, query) {
     searchClause = searchClause.slice(4, searchClause.length);
   }
   return { whereClause, searchClause, orderClause, valueIndex, values };
+}
+
+function get_query_array(valIndex, field, fieldAlt) {
+  return `EXISTS (
+    SELECT 1 
+    FROM unnest(${field}) AS ${fieldAlt}
+    WHERE ${fieldAlt} ILIKE $${valIndex}
+  )`;
 }

@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { Search, Filter, X } from "lucide-react";
 import {
   Dialog,
@@ -41,6 +47,23 @@ const CATEGORIES = {
   event: "Event",
   artist: "Artist",
   track: "Track",
+};
+
+// Debounce function to delay search execution
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
 };
 
 const FilterControl = ({ filter, category, value, onChange }) => {
@@ -132,9 +155,19 @@ const FilterDialog = ({
   activeFilters,
   onFilterChange,
   onToggleFilter,
+  onApplyFilters,
 }) => {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          // Apply filters when dialog closes
+          onApplyFilters();
+        }
+        onClose(open);
+      }}
+    >
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Filters</DialogTitle>
@@ -190,11 +223,13 @@ const FilterDialog = ({
 
 const AdvancedFilter = () => {
   const dispatch = useDispatch();
+  const searchInputRef = useRef(null);
 
   const {
     setQuery,
     query,
     loading: { events: loadingEvents },
+    search,
   } = useStore();
 
   const activeFilters = useSelector(selectFilters);
@@ -204,6 +239,11 @@ const AdvancedFilter = () => {
   const [availableFilters, setAvailableFilters] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
+
+  // Use debounce for search query with 800ms delay
+  const debouncedSearchQuery = useDebounce(searchQuery, 800);
+  const debouncedSearchQueryCat = useDebounce(searchQueryCat, 800);
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -220,6 +260,21 @@ const AdvancedFilter = () => {
     fetchFilters();
   }, []);
 
+  // Effect to handle search on debounced query change
+  useEffect(() => {
+    // Track if this is the input being cleared
+    const wasCleared = prevSearchQuery && !debouncedSearchQuery;
+
+    // Store current query for next comparison
+    setPrevSearchQuery(debouncedSearchQuery);
+
+    // Always perform search when debounced value changes,
+    // including when input is cleared
+    if (debouncedSearchQuery !== query?.value || wasCleared) {
+      handleSearch();
+    }
+  }, [debouncedSearchQuery, debouncedSearchQueryCat]);
+
   const handleFilterChange = (field, value) => {
     dispatch(setFilter({ key: field, value }));
   };
@@ -231,9 +286,9 @@ const AdvancedFilter = () => {
       dispatch(
         setFilter({
           key: filter.field,
-          value:
-            filter.range ??
-            (filter.type.includes("conditional") ? [0, 100] : ""),
+          value: filter.type.includes("conditional")
+            ? { value: filter.range ?? [0, 100], mode: "range" }
+            : { value: [] },
         })
       );
     }
@@ -241,31 +296,85 @@ const AdvancedFilter = () => {
 
   const removeFilter = (field) => {
     dispatch(deleteFilter({ key: field }));
+    // Trigger search after removing a filter
+    setTimeout(handleSearch, 0);
+  };
+
+  const handleSearch = useCallback(() => {
+    // Update query in store (including when empty)
+    setQuery({ key: searchQueryCat, value: searchQuery });
+
+    // Trigger search with current filters and query
+    if (typeof search === "function") {
+      search();
+    } else {
+      console.warn("Search function not available in store");
+    }
+  }, [searchQuery, searchQueryCat, setQuery, search]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      // Remove focus from input to indicate search is happening
+      if (searchInputRef.current) {
+        searchInputRef.current.blur();
+      }
+      handleSearch();
+    }
+  };
+
+  // Handle clicking outside the search input
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target) &&
+        document.activeElement === searchInputRef.current
+      ) {
+        // User clicked outside while the input was focused
+        handleSearch();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [handleSearch]);
+
+  // Helper function to clear search
+  const clearSearch = () => {
+    setSearchQuery("");
+    // Explicitly trigger search with empty query
+    setTimeout(() => {
+      setQuery({ key: searchQueryCat, value: "" });
+      search();
+    }, 0);
   };
 
   const renderFilterTag = ([field, { value, mode }]) => {
     const filter = availableFilters.find((f) => f.field === field);
     if (!filter) return null;
-    let valueTag = <></>;
-    switch (mode) {
-      case "lower":
-        valueTag = `≤ ${value[0]}`;
-        break;
-      case "greater":
-        valueTag = `≥ ${value[0]}`;
-        break;
-      case "range":
-        valueTag = `${value[0]} - ${value[1]}`;
-      default:
-        valueTag = value ? value.join(",") : "";
+
+    let valueTag = "";
+    if (mode === "lower") {
+      valueTag = `≤ ${value[0]}`;
+    } else if (mode === "greater") {
+      valueTag = `≥ ${value[0]}`;
+    } else if (mode === "range") {
+      valueTag = `${value[0]} - ${value[1]}`;
+    } else {
+      valueTag = Array.isArray(value) ? value.join(",") : value;
     }
+
     return (
       <Badge
         key={field}
         variant="secondary"
         className="flex items-center gap-1"
       >
-        {valueTag}
+        <span>
+          {filter.label}: {valueTag}
+        </span>
         <Button
           variant="ghost"
           size="sm"
@@ -278,24 +387,37 @@ const AdvancedFilter = () => {
     );
   };
 
-  useEffect(() => {
-    if (searchQuery && searchQuery.length)
-      setQuery({ key: searchQueryCat, value: searchQuery });
-  }, [searchQuery, searchQueryCat]);
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        <div className="relative flex">
+        <div className="relative flex flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
+            ref={searchInputRef}
             placeholder="Search..."
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-            }}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="pl-8 pr-[104px] py-4"
           />
-          <Select value={searchQueryCat} onValueChange={setSearchQueryCat}>
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-[104px] top-1"
+              onClick={clearSearch}
+            >
+              <X />
+            </Button>
+          )}
+          <Select
+            value={searchQueryCat}
+            onValueChange={(value) => {
+              setSearchQueryCat(value);
+              // Trigger search when category changes
+              setTimeout(handleSearch, 0);
+            }}
+          >
             <SelectTrigger className="absolute right-0 top-0 w-[100px]">
               <SelectValue placeholder="*" />
             </SelectTrigger>
@@ -306,7 +428,7 @@ const AdvancedFilter = () => {
                 <SelectItem value="track_sp_name">Track</SelectItem>
                 <SelectItem value="station_ar_genre">Genre</SelectItem>
                 <SelectItem value="event_ma_id">Event ID</SelectItem>
-                <SelectItem value="*">*</SelectItem>
+                <SelectItem value="*">All</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -321,6 +443,10 @@ const AdvancedFilter = () => {
         </Button>
       </div>
 
+      {loadingEvents && (
+        <div className="text-sm text-gray-500">Searching...</div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {Object.entries(activeFilters).map(renderFilterTag)}
       </div>
@@ -332,6 +458,7 @@ const AdvancedFilter = () => {
         activeFilters={activeFilters}
         onFilterChange={handleFilterChange}
         onToggleFilter={handleToggleFilter}
+        onApplyFilters={handleSearch}
       />
     </div>
   );
