@@ -63,7 +63,6 @@ export async function POST(req) {
 `;
 
     values.push(size, from);
-    console.log(sql);
     client = await pgPool.connect();
     const { rows } = await client.query(sql, values);
     const countResult = await client.query(countSql, values.slice(0, -2));
@@ -98,7 +97,6 @@ export function getQuery(sortBy, sortOrder, filters, query) {
   let whereClauses = [];
   let values = [];
   let valueIndex = 1;
-  console.log(filters);
   if (filters && Object.keys(filters).length > 0) {
     for (const [key, filter] of Object.entries(filters)) {
       if (filter && typeof filter === "object" && "value" in filter) {

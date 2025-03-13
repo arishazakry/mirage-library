@@ -73,7 +73,8 @@ export default function DynamicLayout() {
       <DockviewReact
         onReady={onReady}
         // ref={dockviewRef}
-        className="w-full h-full"
+        className="w-full h-full bg-background"
+        gap={2}
         components={{
           default: EarthView,
           earth: EarthView,

@@ -48,7 +48,7 @@ export async function POST(req) {
         filter: filterConditions,
       },
     };
-    console.log(JSON.stringify(queryBody));
+
     if (query) {
       if (autocomplete) {
         queryBody.bool.must.push({

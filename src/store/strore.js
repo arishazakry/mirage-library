@@ -7,10 +7,10 @@ import {
 } from "d3";
 import axios from "axios";
 import lzString from "lz-string";
+import { getDownloadData } from "./ulti";
 // import exportVariable from "./data/MIRAGE_exportvariables.csv";
 // import locationData from "./data/location.json";
 
-const APIKey = process.env.DATA_API_KEY;
 export const APIUrl =
   (process.env.NODE_ENV === "production"
     ? process.env.DATA_API
@@ -21,7 +21,7 @@ export const HOMEURL =
     : process.env.REACT_APP_DATA_HOMEPAGE_LOCAL) ?? "";
 
 axios.defaults.headers.common = {
-  "api-key": APIKey,
+  "api-key": process.env.DATA_API_KEY,
 };
 
 const useStore = create((set) => {
@@ -36,6 +36,7 @@ const useStore = create((set) => {
     fields: { value: { stationData: [], locationData: [] } },
     event_export_list: { value: {} },
     vizdata: [],
+    vizMap: [],
     events: [],
     detail: null,
     loading: {},
@@ -48,6 +49,21 @@ const useStore = create((set) => {
       set((state) => ({
         [path]: { ...state[path], isLoading: false, error, hasError: true },
       })),
+    requestMapViz: async (filters, query) => {
+      setLoading("vizMap", true);
+      try {
+        const { data } = await axios.post(`${APIUrl}/meta/viz/map/`, {
+          filters,
+          query,
+        });
+        set({ vizMap: data?.data ?? [] });
+        setLoading("vizMap", false);
+      } catch (error) {
+        console.log(error);
+        //   set({ loading: false, error, hasError: true });
+        setLoading("vizMap", false);
+      }
+    },
     fetchData: async () => {
       setLoading("fields", true);
 
@@ -183,6 +199,28 @@ const useStore = create((set) => {
       return axios
         .post(`${APIUrl}/url/`, { data: compressed })
         .then(({ data }) => HOMEURL + "?selected=" + data._id);
+    },
+    handleExportRows: (rows, filters) => {
+      setLoading("exportdata", true);
+      getDownloadData(rows, filters)
+        .then((datadownload) => {
+          const csvOptions = {
+            fieldSeparator: "|",
+            quoteStrings: '"',
+            decimalSeparator: ".",
+            showLabels: true,
+            filename: `mirage-mc-${new Date().toDateString()}`,
+            useBom: true,
+            useKeysAsHeaders: true,
+            headers: Object.keys(event_export_list),
+          };
+          const csvExporter = generateCsv(csvOptions);
+          csvExporter.generateCsv(datadownload);
+          setLoading("exportdata", false);
+        })
+        .catch((e) => {
+          setLoading("exportdata", false);
+        });
     },
     setQuery: (newData) => set({ query: newData }),
   };

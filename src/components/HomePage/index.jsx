@@ -13,7 +13,9 @@ import {
   Languages,
   LayoutDashboard,
   Moon,
+  Redo,
   Sun,
+  Undo,
 } from "lucide-react";
 import Image from "next/image";
 import AdvancedFilter from "../FilterPanel";
@@ -31,6 +33,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import "./index.css";
+import ShareButton from "../ShareButton";
+import ExportButton from "../ExportButton";
 
 export default function HomePage() {
   const t = useTranslations("HomePage");
@@ -46,16 +51,19 @@ export default function HomePage() {
   });
   return (
     <ReduxProvider>
-      <div className="h-dvh w-dvw flex flex-col items-center justify-center">
-        <div className="w-full bg-primary-foreground flex items-center justify-between p-2">
-          <div className="flex items-center">
-            <Image
-              src={require("@/assets/logo.png")}
-              width={150}
-              height={60}
-              alt="mirage-logo"
-              className="m-1 invert dark:invert-0 -hue-rotate-180 dark:hue-rotate-0"
-            />
+      <div className="h-dvh w-dvw flex flex-col items-center justify-center overflow-hidden">
+        <div className="w-full flex items-center justify-between p-2 ">
+          <div className="flex items-center space-x-4 text-sm">
+            <div className="image-container">
+              <div className="bg-gradient w-full h-full rounded-lg absolute top-0 left-0"></div>
+              <Image
+                src={require("@/assets/logo.png")}
+                width={150}
+                height={60}
+                alt="mirage-logo"
+                // className="m-1 invert dark:invert-0 -hue-rotate-180 dark:hue-rotate-0"
+              />
+            </div>
             <Toggle
               onClick={() =>
                 theme === "dark" ? setTheme("light") : setTheme("dark")
@@ -103,9 +111,18 @@ export default function HomePage() {
                 <DropdownMenuItem>Vietnamese</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Separator orientation="vertical" className={"h-5"} />
+            <Button variant="ghost" size="icon">
+              <Undo />
+            </Button>
+            <Button variant="ghost" size="icon">
+              <Redo />
+            </Button>
           </div>
-          <div className="flex">
+          <div className="flex gap-2">
             <AdvancedFilter />
+            <ExportButton />
+            <ShareButton />
           </div>
         </div>
         <div className="flex-grow w-full">

@@ -38,14 +38,14 @@ export default function EventList() {
     },
     [requestDetail]
   );
-  const fetchEvents = useCallback(
-    (filter, query) => requestEvents(filter, query, 10000),
-    [requestEvents] // Dependency ensures it's stable across renders
-  );
+  // const fetchEvents = useCallback(
+  //   (filter, query) => requestEvents(filter, query, 10000),
+  //   [requestEvents] // Dependency ensures it's stable across renders
+  // );
   // useEffect(() => {
   //   fetchEvents(filters, query);
   // }, [fetchEvents, filters, query]);
-  console.log("EVEnt table");
+
   return (
     // <EventTable
     //   id="eventListTable"

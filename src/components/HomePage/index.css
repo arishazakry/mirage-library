@@ -1,0 +1,7 @@
+.image-container {
+  @apply relative w-full h-14 flex items-center justify-center;
+}
+
+.image-container img {
+  @apply relative w-auto h-full object-contain;
+}

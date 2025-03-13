@@ -9,15 +9,13 @@ export default function EventMap({ currentDetail, locs, events }) {
     try {
       const _locsMap = {};
       locs.forEach((d) => (_locsMap[d["location_rg_id"]] = d));
-      const _locs = groups(events, (d) => d["location_rg_id"]).map(
-        ([c, cou]) => ({
-          title: _locsMap[c]?.title,
-          location_rg_id: c,
-          count: cou.length,
-          lat: _locsMap[c]?.lat,
-          long: _locsMap[c]?.long,
-        })
-      );
+      const _locs = events.map(({ event_count, location_rg_id }) => ({
+        title: _locsMap[location_rg_id]?.title,
+        location_rg_id,
+        count: +event_count,
+        lat: _locsMap[location_rg_id]?.lat,
+        long: _locsMap[location_rg_id]?.long,
+      }));
       setEventlocs(_locs);
     } catch (e) {}
   }, [locs, events]);

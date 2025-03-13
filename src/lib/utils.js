@@ -25,3 +25,10 @@ export const rankMetricList = [
   { key: "artist_wd_country", label: "Artist Country" },
   { key: "track_sp_key", label: "Track Key", isArray: true },
 ];
+
+export default async function checkAPIKey(req) {
+  const apiKey = req.headers.get("api-key"); // Read API key from headers
+
+  const validKey = process.env.DATA_API_KEY; // Store API key securely in .env
+  return apiKey === validKey;
+}

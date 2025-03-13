@@ -18,7 +18,7 @@ const useGetShortenLink = () => {
   const getShortenLink = useCallback(async () => {
     const _data = {
       filters,
-      ids: eventSelectedData.map((d) => d._id),
+      ids: eventSelectedData.map((d) => d.event_ma_id),
       id: getDetail(),
     };
 
@@ -29,7 +29,7 @@ const useGetShortenLink = () => {
     return axios
       .post(`${APIUrl}/url/`, { data: compressed })
       .then(({ data }) => {
-        return `${HOMEURL}?selected=${data._id}`;
+        return `${window.location.origin}?selected=${data.id}`;
       })
       .catch((error) => {
         console.error("Error generating shortened link:", error);
