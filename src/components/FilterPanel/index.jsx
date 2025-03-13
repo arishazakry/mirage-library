@@ -305,11 +305,11 @@ const AdvancedFilter = () => {
     setQuery({ key: searchQueryCat, value: searchQuery });
 
     // Trigger search with current filters and query
-    if (typeof search === "function") {
-      search();
-    } else {
-      console.warn("Search function not available in store");
-    }
+    // if (typeof search === "function") {
+    //   search();
+    // } else {
+    //   console.warn("Search function not available in store");
+    // }
   }, [searchQuery, searchQueryCat, setQuery, search]);
 
   const handleKeyDown = (e) => {
@@ -347,7 +347,7 @@ const AdvancedFilter = () => {
     // Explicitly trigger search with empty query
     setTimeout(() => {
       setQuery({ key: searchQueryCat, value: "" });
-      search();
+      // search();
     }, 0);
   };
 
