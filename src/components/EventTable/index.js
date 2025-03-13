@@ -140,25 +140,25 @@ const EventTable = ({
       }}
       layoutMode="grid"
       positionToolbarAlertBanner={"bottom"}
-      renderTopToolbarCustomActions={({ table }) => {
-        return (
-          <Box
-            sx={{
-              display: "flex",
-              gap: "1rem",
-              p: "0.5rem",
-              flexWrap: "no-wrap",
-            }}
-          >
-            <DownloadOption
-              // onDownloadSearchList={()=>handleExportRows(table.getPrePaginationRowModel().rows)}
-              onDownloadSearchList={() => handleExportRows(totalData)}
-              onDownloadSelectedList={() => handleExportRows(selectedData)}
-            />
-            <ShareButton getUrl={getShortenLink} />
-          </Box>
-        );
-      }}
+      // renderTopToolbarCustomActions={({ table }) => {
+      //   return (
+      //     <Box
+      //       sx={{
+      //         display: "flex",
+      //         gap: "1rem",
+      //         p: "0.5rem",
+      //         flexWrap: "no-wrap",
+      //       }}
+      //     >
+      //       <DownloadOption
+      //         // onDownloadSearchList={()=>handleExportRows(table.getPrePaginationRowModel().rows)}
+      //         onDownloadSearchList={() => handleExportRows(totalData)}
+      //         onDownloadSelectedList={() => handleExportRows(selectedData)}
+      //       />
+      //       <ShareButton getUrl={getShortenLink} />
+      //     </Box>
+      //   );
+      // }}
       renderBottomToolbar={({ table }) => {
         const handleSelected = onSendToList
           ? () => {

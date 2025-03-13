@@ -1,8 +1,10 @@
+"use client";
+
 import React, { useCallback, useEffect, useState, useMemo } from "react";
 import Histogram from "./Histogram";
 import Scatterwrapper from "./Scatterwrapper";
 import PCAplot from "./PCAplot";
-import { scaleOrdinal, maxIndex, rollup } from "d3";
+import { scaleOrdinal, maxIndex, rollup, color } from "d3";
 import { isArray } from "lodash";
 import Barchart from "./Barchart";
 import { metricList, rankMetricList } from "@/lib/utils";
@@ -16,6 +18,7 @@ import {
 import { Separator } from "@radix-ui/react-select";
 import { colorArr } from "../Earth3D";
 import { Card } from "../ui/card";
+import { useTheme } from "next-themes";
 
 const TOP = 10;
 function VizPanel({ data, source, onChangeSource, onSelect }) {
@@ -23,6 +26,33 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
   const [rankdata, setrankdata] = useState([]);
   const [colorKey, setColorKey] = useState(rankMetricList[0].key);
   const [hovered, sethovered] = useState(null);
+  const { resolvedTheme } = useTheme();
+  const [theme, setTheme] = useState({
+    primaryColor: "#1D4ED8", // Default primary
+    textColor: "#000000", // Default text
+    cardBg: "#FFFFFF", // Default card background
+    fontFamily: "Inter, sans-serif",
+    fontSize: "14px",
+  });
+  useEffect(() => {
+    debugger;
+    if (typeof window !== "undefined") {
+      const rootStyles = getComputedStyle(document.documentElement);
+      setTheme({
+        primaryColor:
+          `$hsl(${rootStyles.getPropertyValue("--primary").trim()})` ||
+          "#1D4ED8",
+        textColor:
+          rootStyles.getPropertyValue("--text-primary").trim() || "#000000",
+        cardBg:
+          rootStyles.getPropertyValue("--background-card").trim() || "#FFFFFF",
+        fontFamily:
+          rootStyles.getPropertyValue("--font-family").trim() ||
+          "Inter, sans-serif",
+        fontSize: rootStyles.getPropertyValue("--font-size").trim() || "14px",
+      });
+    }
+  }, [resolvedTheme]);
   useEffect(() => {
     const histindata = metricList.map(({ key, label }) => ({
       key,
@@ -106,10 +136,13 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
       <Separator>
         <h3 className="text-lg font-semibold text-primary">Track histogram</h3>
       </Separator>
-      <div className="flex flex-wrap justify-center gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-center text-center">
         {histindata.map(({ key, label, data }) => (
-          <div key={key} className="h-30 w-75">
-            <Histogram name={label} data={data} />
+          <div key={key} className="w-full relative flex flex-col">
+            <div key={key} className="w-full aspect-[2/1]">
+              <Histogram name={label} data={data} theme={theme} />
+            </div>
+            <h4>{label}</h4>
           </div>
         ))}
       </div>

@@ -131,12 +131,13 @@ const useStore = create((set) => {
         setLoading("fields", false);
       }
     },
-    requestVizdata: async (ids, filters) => {
+    requestVizdata: async (ids, filters, query) => {
       setLoading("vizdata", true);
       try {
         const { data } = await axios.post(`${APIUrl}/meta/viz`, {
           ids,
           filters,
+          query,
         });
         set({ vizdata: data?.data ?? [] });
         setLoading("vizdata", false);

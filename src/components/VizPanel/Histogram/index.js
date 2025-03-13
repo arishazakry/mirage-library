@@ -1,10 +1,11 @@
+"use client";
 import React, { useEffect, useState } from "react";
-import { useTheme } from "@mui/material/styles";
 import dynamic from "next/dynamic";
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
+import "./index.css";
+import { color } from "d3";
 
-export default function Histogram({ data, name }) {
-  const theme = useTheme();
+export default function Histogram({ data, name, theme = {} }) {
   const [_data, set_Data] = useState([]);
   useEffect(() => {
     set_Data([
@@ -12,15 +13,15 @@ export default function Histogram({ data, name }) {
         x: data,
         type: "histogram",
         marker: {
-          color: "rgba(100,250,100,0.7)",
+          color: theme.primaryColor,
           line: {
-            color: "rgba(100,250,100,1)",
+            color: color(theme.primaryColor)?.brighter(4).toString(),
             width: 1,
           },
         },
       },
     ]);
-  }, [data]);
+  }, [data, theme.primaryColor]);
   return (
     <Plot
       data={_data}
@@ -28,13 +29,13 @@ export default function Histogram({ data, name }) {
         xaxis: { title: name },
         yaxis: { showline: false, showticklabels: false, zeroline: false },
         font: {
-          family: theme.typography.fontFamily,
-          size: theme.typography.fontSize,
-          color: theme.palette.text.primary,
+          family: theme.fontFamily,
+          size: theme.fontSize,
+          color: "inherit",
         },
-        margin: { t: 10, r: 10, l: 10, b: 40 },
-        paper_bgcolor: theme.palette.background.paper,
-        plot_bgcolor: "rgba(0,0,0,0)", //theme.palette.background.paper,
+        margin: { t: 10, r: 10, l: 10, b: 20 },
+        paper_bgcolor: "transparent",
+        plot_bgcolor: "transparent", //theme.palette.background.paper,
       }}
       style={{ width: "100%", height: "100%" }}
       config={{
