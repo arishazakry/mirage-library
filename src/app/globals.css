@@ -117,3 +117,51 @@ body {
     }
   }
 }
+
+.MuiInputBase-root.MuiInput-root,
+.MuiPaginationItem-root {
+  @apply !text-current;
+  .MuiSvgIcon-root {
+    @apply text-current;
+  }
+}
+.MuiPagination-root MuiPagination-textPrimary {
+  @apply text-current;
+}
+.MuiPaper-root {
+  @apply !bg-transparent !text-current;
+  .MuiBox-root {
+    @apply !bg-card !text-current;
+  }
+}
+.MuiFormLabel-root {
+  @apply !text-inherit;
+}
+.MuiTypography-root {
+  @apply !text-inherit opacity-60;
+}
+.MuiTableBody-root {
+  .MuiTableRow-root {
+    @apply !bg-card/60 !text-current;
+  }
+  .MuiTableRow-head {
+    @apply !bg-primary/10;
+  }
+}
+.MuiTableRow-root {
+  @apply !bg-card !text-current;
+}
+.MuiCheckbox-root {
+  @apply !text-current;
+}
+.MuiTable-root {
+  @apply bg-primary/10 transition-colors rounded-lg shadow-md;
+}
+
+.MuiTableCell-root {
+  @apply !text-current;
+}
+
+.MuiButtonBase-root.MuiButton-root {
+  @apply text-primary;
+}

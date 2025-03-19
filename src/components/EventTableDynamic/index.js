@@ -25,6 +25,7 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import axios from "axios";
+import { Button } from "../ui/button";
 
 const EventTableDynamic = ({
   id = "tableevent",
@@ -114,8 +115,13 @@ const EventTableDynamic = ({
         flexDirection: "column",
         minHeight: 1,
         height: "100%",
+        background: "unset",
+        color: "unset",
       },
     },
+    muiTableContainerProps: { sx: { background: "unset", color: "unset" } },
+    muiTableHeadCellProps: { sx: { background: "unset", color: "unset" } },
+    muiPaginationProps: { sx: { background: "unset", color: "unset" } },
     initialState: { density: "compact" },
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
@@ -133,6 +139,8 @@ const EventTableDynamic = ({
         onSelectRow(row.original);
       },
       sx: {
+        background: "unset",
+        color: "unset",
         cursor: "pointer",
         opacity: highlightId
           ? highlightId[_id] === row.original[_id]
@@ -146,7 +154,9 @@ const EventTableDynamic = ({
           : "normal",
       },
     }),
-    muiSelectCheckboxProps: { size: "small" },
+    muiSelectCheckboxProps: {
+      size: "small",
+    },
     muiTableBodyCellProps: {
       sx: { wordBreak: "break-word", whiteSpace: "normal" },
     },
@@ -176,25 +186,22 @@ const EventTableDynamic = ({
         : () => {};
       return (
         <Toolbar sx={{ flexDirection: "column" }}>
-          <div className="flex">
+          <div className="flex items-center">
             <MRT_ToolbarAlertBanner stackAlertBanner table={table} />
             {Object.keys(rowSelection).length ? (
               <>
                 {onSendToList && !disableAdding && (
                   <Tooltip title={"Add to Selected list"}>
-                    <IconButton onClick={handleSelected} variant="contained">
+                    <Button onClick={handleSelected} variant="contained">
                       <AddEventIcon />
-                    </IconButton>
+                    </Button>
                   </Tooltip>
                 )}
                 {onRemoveFromList && (
                   <Tooltip title={"Remove from Selected list"}>
-                    <IconButton
-                      onClick={handleRemoveSelected}
-                      variant="contained"
-                    >
+                    <Button onClick={handleRemoveSelected} variant="contained">
                       <RemoveEventIcon />
-                    </IconButton>
+                    </Button>
                   </Tooltip>
                 )}
               </>

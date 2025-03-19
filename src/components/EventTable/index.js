@@ -13,13 +13,9 @@ import {
 import { Box, IconButton, Toolbar, Tooltip } from "@mui/material";
 import AddEventIcon from "@mui/icons-material/AddShoppingCart";
 import RemoveEventIcon from "@mui/icons-material/RemoveShoppingCart";
-import { generateCsv } from "export-to-csv";
-import DownloadOption from "./DownloadOption";
-import ShareButton from "./ShareButton";
-import { getDownloadData } from "@/store/ulti";
 import useStore from "@/store/strore";
 import useGetShortenLink from "@/store/useGetShortenLink";
-
+import { Button } from "../ui/button";
 const EventTable = ({
   id = "tableevent",
   columns,
@@ -99,9 +95,13 @@ const EventTable = ({
           flexDirection: "column",
           minHeight: 1,
           height: "100%",
+          background: "unset",
+          color: "unset",
         },
       }}
-      // // muiTableContainerProps={{ sx: { height:'100%', flexGrow:2 } }}
+      muiTableContainerProps={{ sx: { background: "unset", color: "unset" } }}
+      muiTableHeadCellProps={{ sx: { background: "unset", color: "unset" } }}
+      muiPaginationProps={{ sx: { background: "unset", color: "unset" } }}
       initialState={{ density: "compact" }}
       onSortingChange={setSorting}
       onRowSelectionChange={setRowSelection}
@@ -114,6 +114,9 @@ const EventTable = ({
         },
         // sx: { cursor: 'pointer',opacity:highlightId?(highlightId.Event_MA_ID=== row.original.Event_MA_ID?1:0.7):1},
         sx: {
+          background: "unset",
+          color: "unset",
+
           cursor: "pointer",
           opacity: highlightId
             ? highlightId[_id] === row.original[_id]
@@ -129,7 +132,12 @@ const EventTable = ({
       })}
       muiSelectCheckboxProps={{ size: "small" }}
       muiTableBodyCellProps={{
-        sx: { wordBreak: "break-word", whiteSpace: "normal" },
+        sx: {
+          background: "unset",
+          color: "unset",
+          wordBreak: "break-word",
+          whiteSpace: "normal",
+        },
       }}
       enableColumnResizing={true}
       enableFullScreenToggle={false}
@@ -185,26 +193,26 @@ const EventTable = ({
             </Box>
             {onSendToList && !disableAdding && (
               <Tooltip title={"Add to Selected list"}>
-                <IconButton
+                <Button
                   // color="info"
                   // disabled={!table.getIsSomeRowsSelected()}
                   onClick={handleSelected}
                   variant="contained"
                 >
                   <AddEventIcon />
-                </IconButton>
+                </Button>
               </Tooltip>
             )}
             {onRemoveFromList && (
               <Tooltip title={"Remove from Selected list"}>
-                <IconButton
+                <Button
                   // color="info"
                   // disabled={!table.getIsSomeRowsSelected()}
                   onClick={handleRemoveSelected}
                   variant="contained"
                 >
                   <RemoveEventIcon />
-                </IconButton>
+                </Button>
               </Tooltip>
             )}
           </Toolbar>

@@ -35,7 +35,6 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
     fontSize: "14px",
   });
   useEffect(() => {
-    debugger;
     if (typeof window !== "undefined") {
       const rootStyles = getComputedStyle(document.documentElement);
       setTheme({
