@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, ChevronsUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,11 @@ import FilterSliderWrapper from "../FilterSliderWrapper";
 import AutocompleteInput from "../AutocompleteInput";
 import AutocompleteInputWrapper from "../AutocompleteInputWrapper";
 import useStore from "@/store/strore";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
 
 const CATEGORIES = {
   location: "Location",
@@ -107,43 +112,89 @@ const CategorySection = ({
   onFilterChange,
   onToggleFilter,
 }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
   const categoryFilters = filters.filter((f) => f.field.startsWith(category));
+  const categoryFiltersDefault = categoryFilters.filter((f) => f.default);
 
   if (categoryFilters.length === 0) return null;
 
   return (
     <div className="space-y-4">
-      <h3 className="font-medium text-sm text-gray-500">
-        {CATEGORIES[category]}
-      </h3>
-      <div className="space-y-4">
-        {categoryFilters.map((filter) => {
-          const isActive = filter.field in activeFilters;
-          return (
-            <div key={filter.field} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={() => onToggleFilter(filter)}
-                    className="h-4 w-4"
-                  />
-                  {filter.label}
-                </label>
-              </div>
-              {isActive && (
-                <FilterControl
-                  category={category}
-                  filter={filter}
-                  value={activeFilters[filter.field]}
-                  onChange={(value) => onFilterChange(filter.field, value)}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-2">
+        <div className="flex items-center justify-between space-x-4 px-4">
+          <h3 className="font-medium text-sm text-gray-500">
+            {CATEGORIES[category]}
+          </h3>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <ChevronsUpDown className="h-4 w-4" />
+              <span className="sr-only">Toggle</span>
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+
+        <div className="space-y-4">
+          {!isOpen ? (
+            categoryFiltersDefault.map((filter) => {
+              const isActive = filter.field in activeFilters;
+              return (
+                <div key={filter.field} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isActive}
+                        onChange={() => onToggleFilter(filter)}
+                        className="h-4 w-4"
+                      />
+                      {filter.label}
+                    </label>
+                  </div>
+                  {isActive && (
+                    <FilterControl
+                      category={category}
+                      filter={filter}
+                      value={activeFilters[filter.field]}
+                      onChange={(value) => onFilterChange(filter.field, value)}
+                    />
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <CollapsibleContent className="space-y-2">
+              {categoryFilters.map((filter) => {
+                const isActive = filter.field in activeFilters;
+                return (
+                  <div key={filter.field} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={isActive}
+                          onChange={() => onToggleFilter(filter)}
+                          className="h-4 w-4"
+                        />
+                        {filter.label}
+                      </label>
+                    </div>
+                    {isActive && (
+                      <FilterControl
+                        category={category}
+                        filter={filter}
+                        value={activeFilters[filter.field]}
+                        onChange={(value) =>
+                          onFilterChange(filter.field, value)
+                        }
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </CollapsibleContent>
+          )}
+        </div>
+      </Collapsible>
     </div>
   );
 };

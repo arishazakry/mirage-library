@@ -158,7 +158,12 @@ const EventTableDynamic = ({
       size: "small",
     },
     muiTableBodyCellProps: {
-      sx: { wordBreak: "break-word", whiteSpace: "normal" },
+      sx: {
+        wordBreak: "break-word",
+        background: "unset",
+        color: "unset",
+        whiteSpace: "normal",
+      },
     },
     enableColumnResizing: true,
     enableFullScreenToggle: false,

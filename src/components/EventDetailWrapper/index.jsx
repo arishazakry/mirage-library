@@ -19,12 +19,14 @@ const EventDetailWrapper = ({ event }) => {
     [requestDetail]
   );
   const meanRadar = useMemo(() => {
-    const total = vizdata;
-    const meanradar = {};
-    metricRadarList.forEach(({ key }) => {
-      meanradar[key] = d3mean(total, (d) => d[key]);
-    });
-    return meanradar;
+    // const total = vizdata;
+    // const meanradar = {};
+    // metricRadarList.forEach(({ key }) => {
+    //   meanradar[key] = d3mean(total, (d) => d[key]);
+    // });
+    // return meanradar;
+    // TODO: Fix this
+    return {};
   }, [vizdata]);
   return (
     <EventDetail

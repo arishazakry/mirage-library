@@ -19,6 +19,7 @@ import { Separator } from "@radix-ui/react-select";
 import { colorArr } from "../Earth3D";
 import { Card } from "../ui/card";
 import { useTheme } from "next-themes";
+import HistogramDis from "./HistogramDis";
 
 const TOP = 10;
 function VizPanel({ data, source, onChangeSource, onSelect }) {
@@ -56,7 +57,7 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
     const histindata = metricList.map(({ key, label }) => ({
       key,
       label,
-      data: data.map((d) => d[key]),
+      data: data?.his?.[key] ?? {},
     }));
     sethisindata(histindata);
   }, [data]);
@@ -71,21 +72,21 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
   });
 
   useEffect(() => {
-    const countMap = {};
-    data.forEach((d) => {
-      if (isArray(d[colorKey])) {
-        d[colorKey].forEach((e) => (countMap[e] = (countMap[e] ?? 0) + 1));
-      } else if (d[colorKey] && d[colorKey] !== null) {
-        countMap[d[colorKey]] = (countMap[d[colorKey]] ?? 0) + 1;
-      }
-    });
-    let rankData = [];
-    Object.keys(countMap).forEach((k) => {
-      rankData.push({ title: k, count: countMap[k] });
-    });
-    rankData.sort((a, b) => b.count - a.count);
-    rankData = rankData.slice(0, TOP);
-    setrankdata(rankData);
+    // const countMap = {};
+    // data?.rank?.forEach((d) => {
+    //   if (isArray(d[colorKey])) {
+    //     d[colorKey].forEach((e) => (countMap[e] = (countMap[e] ?? 0) + 1));
+    //   } else if (d[colorKey] && d[colorKey] !== null) {
+    //     countMap[d[colorKey]] = (countMap[d[colorKey]] ?? 0) + 1;
+    //   }
+    // });
+    // let rankData = [];
+    // Object.keys(countMap).forEach((k) => {
+    //   rankData.push({ title: k, count: countMap[k] });
+    // });
+    // rankData.sort((a, b) => b.count - a.count);
+    // rankData = rankData.slice(0, TOP);
+    setrankdata(data?.rank?.[colorKey] ?? []);
   }, [colorKey, data]);
   useEffect(() => {
     const colorsCategory = (function (otherColor = "#ececec") {
@@ -139,7 +140,7 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
         {histindata.map(({ key, label, data }) => (
           <div key={key} className="w-full relative flex flex-col">
             <div key={key} className="w-full aspect-[2/1]">
-              <Histogram name={label} data={data} theme={theme} />
+              <HistogramDis name={label} data={data} theme={theme} />
             </div>
             <h4>{label}</h4>
           </div>
@@ -163,7 +164,7 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
         </div>
         <Barchart data={rankdata} />
       </Card>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Scatterwrapper
           data={data}
           selectList={metricList}
@@ -180,7 +181,7 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
           hovered={hovered}
           getColor={rankMap}
         />
-      </div>
+      </div> */}
     </div>
   );
 }

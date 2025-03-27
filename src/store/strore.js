@@ -35,7 +35,7 @@ const useStore = create((set) => {
     countries: [],
     fields: { value: { stationData: [], locationData: [] } },
     event_export_list: { value: {} },
-    vizdata: [],
+    vizdata: {},
     vizMap: [],
     events: [],
     detail: null,
@@ -139,7 +139,7 @@ const useStore = create((set) => {
           filters,
           query,
         });
-        set({ vizdata: data?.data ?? [] });
+        set({ vizdata: data?.data ?? {} });
         setLoading("vizdata", false);
       } catch (error) {
         //   set({ loading: false, error, hasError: true });
