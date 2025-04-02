@@ -20,6 +20,7 @@ import { colorArr } from "../Earth3D";
 import { Card } from "../ui/card";
 import { useTheme } from "next-themes";
 import HistogramDis from "./HistogramDis";
+import PlotlHolder from "../PlotlHolder";
 
 const TOP = 10;
 function VizPanel({ data, source, onChangeSource, onSelect }) {
@@ -140,9 +141,11 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
         {histindata.map(({ key, label, data }) => (
           <div key={key} className="w-full relative flex flex-col">
             <div key={key} className="w-full aspect-[2/1]">
-              <HistogramDis name={label} data={data} theme={theme} />
+              <PlotlHolder title={label} type="histogram">
+                <HistogramDis name={label} data={data} theme={theme} />
+              </PlotlHolder>
             </div>
-            <h4>{label}</h4>
+            {/* <h4>{label}</h4> */}
           </div>
         ))}
       </div>

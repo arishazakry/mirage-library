@@ -25,7 +25,7 @@ export default function EventList() {
     dispatch(actionCreators.newList(events));
   }, [events]);
 
-  const eventTotalData = useSelector((state) => state.seletedList.currentList);
+  // const eventTotalData = useSelector((state) => state.seletedList.currentList);
   const _eventSelectedData = useSelector((state) => state.seletedList.items);
   const eventSelectedData = useMemo(
     () => Array.from(_eventSelectedData.values()),
