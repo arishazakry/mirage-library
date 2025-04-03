@@ -11,6 +11,7 @@ export default function VizPanelWraper() {
     vizdata,
     requestDetail,
     requestVizdata,
+    // requestAvgData,
     query,
     loading: { events: loadingEvents },
   } = useStore();
@@ -24,6 +25,7 @@ export default function VizPanelWraper() {
   );
   useEffect(() => {
     const ids = vizsource ? undefined : eventSelectedData.map((d) => d._id);
+    // requestAvgData(ids, filters, query);
     requestVizdata(ids, filters, query);
   }, [vizsource, eventSelectedData, query, filters]);
   const onSelectStream = useCallback((data) => {

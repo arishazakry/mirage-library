@@ -13,7 +13,7 @@ export default function EventList() {
   const {
     detail,
     requestDetail,
-    requestEvents,
+    requestAvgData,
     query,
     events,
     loading: { events: loadingEvents },
@@ -35,8 +35,9 @@ export default function EventList() {
   const onSelectStream = useCallback(
     (data) => {
       requestDetail(data);
+      requestAvgData(data);
     },
-    [requestDetail]
+    [requestDetail, requestAvgData]
   );
   // const fetchEvents = useCallback(
   //   (filter, query) => requestEvents(filter, query, 10000),

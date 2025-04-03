@@ -37,6 +37,7 @@ const useStore = create((set) => {
     event_export_list: { value: {} },
     vizdata: {},
     vizMap: [],
+    avg: [],
     events: [],
     detail: null,
     loading: {},
@@ -129,6 +130,21 @@ const useStore = create((set) => {
       } catch (error) {
         //   set({ loading: false, error, hasError: true });
         setLoading("fields", false);
+      }
+    },
+    requestAvgData: async (ids, filters, query) => {
+      setLoading("avg", true);
+      try {
+        const { data } = await axios.post(`${APIUrl}/meta/viz/average`, {
+          ids,
+          filters,
+          query,
+        });
+        set({ vizdata: data?.avg ?? [] });
+        setLoading("avg", false);
+      } catch (error) {
+        //   set({ loading: false, error, hasError: true });
+        setLoading("avg", false);
       }
     },
     requestVizdata: async (ids, filters, query) => {

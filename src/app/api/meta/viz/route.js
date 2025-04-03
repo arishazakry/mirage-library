@@ -119,8 +119,6 @@ SELECT jsonb_build_object(
         'track_sp_key', (SELECT track_key_data FROM final_track_key)
     )
 ) AS result;`;
-
-    // LIMIT 10000
     client = await pgPool.connect();
     const { rows } = await client.query(sqlFilter, values);
     const data = {};
