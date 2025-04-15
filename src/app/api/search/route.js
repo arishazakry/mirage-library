@@ -29,24 +29,20 @@ export async function POST(req) {
       getQuery(sortBy, sortOrder, filters, query);
 
     const sql = `
-      SELECT e.event_ma_id,
-            e.event_ma_metadataReliability,
-            e.event_se_description,
-            e.location_rg_id,
-            e.station_rg_id,
-            e.artist_sp_id,
-            e.track_sp_id,
-             l.location_rg_city , 
-             l.location_rg_country ,
-             s.station_ar_genre, 
-             s.station_rg_name,
-             t.track_sp_name, 
-             a.artist_sp_name
-      FROM event e
-      INNER JOIN location l ON e.location_rg_id = l.location_rg_id
-      INNER JOIN station s ON e.station_rg_id = s.station_rg_id
-      INNER JOIN track t ON e.track_sp_id = t.track_sp_id
-      LEFT JOIN artist a ON e.artist_sp_id = a.artist_sp_id
+      SELECT event_ma_id,
+            event_ma_metadataReliability,
+            event_se_description,
+            location_rg_id,
+            station_rg_id,
+            artist_sp_id,
+            track_sp_id,
+             location_rg_city , 
+             location_rg_country ,
+              station_ar_genre, 
+              station_rg_name,
+             track_sp_name, 
+             artist_sp_name
+      FROM event_flat
       ${whereClause} ${searchClause}
       ${orderClause}
       LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
@@ -54,11 +50,7 @@ export async function POST(req) {
     // , COUNT(*) OVER() AS total_count
     const countSql = `
   SELECT COUNT(*) AS total_count
-  FROM event e
-  INNER JOIN location l ON e.location_rg_id = l.location_rg_id
-  INNER JOIN station s ON e.station_rg_id = s.station_rg_id
-  INNER JOIN track t ON e.track_sp_id = t.track_sp_id
-  LEFT JOIN artist a ON e.artist_sp_id = a.artist_sp_id
+  FROM event_flat 
   ${whereClause} ${searchClause}
 `;
 
@@ -88,7 +80,7 @@ export function getQuery(sortBy, sortOrder, filters, query) {
   ]);
 
   // Default sorting
-  let orderClause = "ORDER BY e.event_ma_id ASC";
+  let orderClause = "ORDER BY event_ma_id ASC";
   if (sortBy && allowedSortColumns.has(sortBy)) {
     const order = sortOrder.toUpperCase() === "DESC" ? "DESC" : "ASC";
     orderClause = `ORDER BY ${sortBy} ${order}`;
@@ -134,16 +126,16 @@ export function getQuery(sortBy, sortOrder, filters, query) {
   let searchClause = "";
   if (query && query.value && query.key) {
     if (query.key == "*") {
-      searchClause = `AND (a.artist_sp_name ILIKE $${valueIndex} OR t.track_sp_name ILIKE $${valueIndex} OR (${get_query_array(
+      searchClause = `AND (artist_sp_name ILIKE $${valueIndex} OR track_sp_name ILIKE $${valueIndex} OR (${get_query_array(
         valueIndex,
-        "s.station_ar_genre",
+        "station_ar_genre",
         "station_ar_genre"
-      )}) OR e.event_ma_id ILIKE $${valueIndex})`;
+      )}) OR event_ma_id ILIKE $${valueIndex})`;
     } else {
       if (query.key === "station_ar_genre")
         searchClause = `AND (${get_query_array(
           valueIndex,
-          "s.station_ar_genre",
+          "station_ar_genre",
           "station_ar_genre"
         )})`;
       else

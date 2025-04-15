@@ -24,7 +24,7 @@ axios.defaults.headers.common = {
   "api-key": process.env.DATA_API_KEY,
 };
 
-const useStore = create((set) => {
+const useStore = create((set, get) => {
   const setLoading = (key, isLoading) =>
     set((state) => ({
       loading: { ...state.loading, [key]: isLoading },
@@ -36,6 +36,7 @@ const useStore = create((set) => {
     fields: { value: { stationData: [], locationData: [] } },
     event_export_list: { value: {} },
     vizdata: {},
+    currentControllerVizdata: null,
     vizMap: [],
     avg: [],
     events: [],
@@ -148,17 +149,52 @@ const useStore = create((set) => {
       }
     },
     requestVizdata: async (ids, filters, query) => {
+      // Cancel previous request if still active
+      const prev = get().currentControllerVizdata;
+      if (prev) prev.abort();
+
+      const controller = new AbortController();
+      set({ currentControllerVizdata: controller });
+
       setLoading("vizdata", true);
+
       try {
-        const { data } = await axios.post(`${APIUrl}/meta/viz`, {
-          ids,
-          filters,
-          query,
-        });
-        set({ vizdata: data?.data ?? {} });
+        // Use axios for consistency and better error handling
+        const response = await axios.post(
+          `${APIUrl}/meta/viz`,
+          {
+            ids,
+            filters,
+            query,
+            metrics: null, // Pass null to get all metrics
+          },
+          {
+            signal: controller.signal,
+            responseType: "json", // Expecting JSON response
+          }
+        );
+
+        // Process the response data
+        if (response.data && response.data.data) {
+          // // Update store with histograms and rankings
+          // const { his, rank } = response.data.data;
+
+          // // Create a comprehensive vizdata object with all data
+          // const newVizdata = {
+          //   histograms: his || {},
+          //   rankings: rank || {},
+          // };
+
+          // // Update the store with the full data
+          set({ vizdata: response.data.data });
+        }
+
         setLoading("vizdata", false);
       } catch (error) {
-        //   set({ loading: false, error, hasError: true });
+        if (error.name !== "AbortError") {
+          console.error("VizData request error:", error);
+          set({ error: error.message });
+        }
         setLoading("vizdata", false);
       }
     },
