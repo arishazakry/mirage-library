@@ -33,6 +33,7 @@ const useStore = create((set, get) => {
     locs: [],
     locationData: [],
     countries: [],
+    histMetrics: ["track_sp_year"],
     fields: { value: { stationData: [], locationData: [] } },
     event_export_list: { value: {} },
     vizdata: {},
@@ -47,6 +48,9 @@ const useStore = create((set, get) => {
     query: {},
     getLoading: (path) => (state) => state.loading?.[path] || false,
     setLoading,
+    sethistMetrics: (metrics) => {
+      set({ histMetrics: metrics });
+    },
     setError: (path, error) =>
       set((state) => ({
         [path]: { ...state[path], isLoading: false, error, hasError: true },
@@ -151,13 +155,14 @@ const useStore = create((set, get) => {
     requestVizdata: async (ids, filters, query) => {
       // Cancel any previous request
       const prev = get().currentControllerVizdata;
+      const metrics = get().histMetrics;
       if (prev) prev.abort();
 
       const controller = new AbortController();
       set({ currentControllerVizdata: controller });
 
       setLoading("vizdata", true);
-      set({ vizdata: { histograms: {}, rankings: {}, executionTime: null } });
+      set({ vizdata: { his: {}, rank: {}, executionTime: null } });
 
       try {
         const response = await fetch(`${APIUrl}/meta/viz`, {
@@ -167,7 +172,7 @@ const useStore = create((set, get) => {
             ids,
             filters,
             query,
-            metrics: null,
+            metrics,
           }),
           signal: controller.signal,
         });
@@ -241,6 +246,89 @@ const useStore = create((set, get) => {
           set({ error: error.message });
         }
         setLoading("vizdata", false);
+      }
+    },
+    updateVizHistograms: async (ids, filters, query, metrics) => {
+      const { vizdata } = get();
+      // Determine which metrics are already available
+      const existingMetrics = new Set(Object.keys(vizdata.his || {}));
+      const missingMetrics = metrics.filter((m) => !existingMetrics.has(m));
+      if (missingMetrics.length === 0) return; // All metrics already available
+
+      // Cancel any previous histogram update stream
+      const prev = get().currentControllerVizdata;
+      if (prev) prev.abort();
+
+      const controller = new AbortController();
+      set({ currentControllerVizdata: controller });
+
+      try {
+        const response = await fetch(`${APIUrl}/meta/viz/hist`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ids,
+            filters,
+            query,
+            metrics: missingMetrics,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.body) throw new Error("No response body from stream");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const newHistograms = {};
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop(); // Save the partial for next loop
+
+          for (const part of parts) {
+            const lines = part.trim().split("\n");
+            const event = lines
+              .find((l) => l.startsWith("event:"))
+              ?.slice(7)
+              .trim();
+            const dataLine = lines
+              .find((l) => l.startsWith("data:"))
+              ?.slice(6)
+              .trim();
+
+            if (!event || !dataLine) continue;
+
+            const data = JSON.parse(dataLine);
+
+            if (event === "histogram") {
+              newHistograms[data.metric] = data.data;
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  his: {
+                    ...prev.vizdata.his,
+                    [data.metric]: data.data,
+                  },
+                },
+              }));
+            } else if (event === "error") {
+              console.error("Stream error:", data.error);
+              set({ error: data.error });
+            }
+          }
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("Histogram stream error:", error);
+          set({ error: error.message });
+        }
       }
     },
     requestEvents: async (filters, query, size, isid) => {

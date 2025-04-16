@@ -43,10 +43,10 @@ function ListenCard({ data, onSelect }) {
             >
               {data.track_sp_name}
             </Typography>
-            {data.year_released && (
+            {data.track_sp_year && (
               <Typography color="text.secondary" gutterBottom>
                 {" "}
-                {data.year_released}
+                {data.track_sp_year}
               </Typography>
             )}
             {data.track_name_genre && (

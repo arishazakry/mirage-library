@@ -15,15 +15,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Separator } from "@radix-ui/react-select";
 import { colorArr } from "../Earth3D";
 import { Card } from "../ui/card";
 import { useTheme } from "next-themes";
 import HistogramDis from "./HistogramDis";
 import PlotlHolder from "../PlotlHolder";
+import { Checkbox } from "../ui/checkbox";
+import {
+  InputMultiSelect,
+  InputMultiSelectTrigger,
+} from "../ui/InputMultiSelectTrigger";
+import { Separator } from "../ui/separator";
 
 const TOP = 10;
-function VizPanel({ data, source, onChangeSource, onSelect }) {
+function VizPanel({
+  data,
+  histMetrics,
+  source,
+  onChangehistMetrics,
+  onChangeSource,
+  onSelect,
+}) {
   const [histindata, sethisindata] = useState([]);
   const [rankdata, setrankdata] = useState([]);
   const [colorKey, setColorKey] = useState(rankMetricList[0].key);
@@ -55,13 +67,15 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
     }
   }, [resolvedTheme]);
   useEffect(() => {
-    const histindata = metricList.map(({ key, label }) => ({
-      key,
-      label,
-      data: data?.his?.[key] ?? {},
-    }));
+    const histindata = metricList
+      .filter(({ key }) => histMetrics.includes(key))
+      .map(({ key, label }) => ({
+        key,
+        label,
+        data: data?.his?.[key] ?? {},
+      }));
     sethisindata(histindata);
-  }, [data]);
+  }, [data, histMetrics]);
   const onHover = useCallback((data) => {
     sethovered(data);
   }, []);
@@ -121,9 +135,13 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
       },
     });
   }, [rankdata]);
+  const metricListOp = useMemo(
+    () => metricList.map((d) => ({ value: d.key, label: d.label })),
+    [metricList]
+  );
   return (
     <div className="relative h-full p-5 space-y-4 overflow-y-auto">
-      <div>
+      {/* <div>
         <Select value={source} onValueChange={onChangeSource}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Viz source" />
@@ -133,10 +151,46 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
             <SelectItem value="selected">Selected list</SelectItem>
           </SelectContent>
         </Select>
+      </div> */}
+      <Card className="overflow-y-auto bg-muted p-4">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">Top 10</h3>
+            <div className="max-w-100">
+              <Select value={colorKey} onValueChange={setColorKey}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Metric" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rankMetricList.map(({ key, label }) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <Barchart data={rankdata} />
+      </Card>
+      <Separator className="my-4" />
+      <div className="flex flex-col items-center">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-primary">
+            Track histogram
+          </h3>
+          <div>
+            <InputMultiSelect
+              options={metricListOp}
+              value={histMetrics}
+              onValueChange={(value) => onChangehistMetrics(value)}
+            >
+              {(provided) => <InputMultiSelectTrigger {...provided} />}
+            </InputMultiSelect>
+          </div>
+        </div>
       </div>
-      <Separator>
-        <h3 className="text-lg font-semibold text-primary">Track histogram</h3>
-      </Separator>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-center text-center">
         {histindata.map(({ key, label, data }) => (
           <div key={key} className="w-full relative flex flex-col">
@@ -149,24 +203,7 @@ function VizPanel({ data, source, onChangeSource, onSelect }) {
           </div>
         ))}
       </div>
-      <Card className="overflow-y-auto bg-muted p-4">
-        <div className="flex flex-col items-center space-y-4">
-          <h3 className="text-lg font-semibold">Top 10</h3>
-          <Select value={colorKey} onValueChange={setColorKey}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select Metric" />
-            </SelectTrigger>
-            <SelectContent>
-              {rankMetricList.map(({ key, label }) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Barchart data={rankdata} />
-      </Card>
+
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Scatterwrapper
           data={data}
