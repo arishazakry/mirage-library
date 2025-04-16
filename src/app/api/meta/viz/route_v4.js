@@ -3,18 +3,16 @@ import { getQuery } from "../../search/route.js";
 import pgPool from "../../config/postgresql.js";
 import { metricList } from "@/lib/utils.js";
 import { rangeFilterMap } from "../../filters/available/route.js";
-import { v4 as uuidv4 } from "uuid"; // Import UUID library
 
 export const revalidate = 60;
 
 export async function POST(req) {
-  const encoder = new TextEncoder();
+  const startTime = Date.now();
+  let client;
 
+  const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const startTime = Date.now();
-      let client;
-
       try {
         const body = await req.json();
         let { ids, query, filters, sortBy, sortOrder = "ASC", metrics } = body;
@@ -26,56 +24,60 @@ export async function POST(req) {
 
         const hisNum = 10;
         const values = [];
-        let whereClause = "";
+        let whereCondition = "";
 
         if (ids) {
           values.push(ids);
-          whereClause = "WHERE event_ma_id = ANY($1)";
+          whereCondition = "WHERE event_ma_id = ANY($1)";
         } else {
           const {
-            whereClause: w,
+            whereClause,
             searchClause,
             values: qv,
           } = getQuery(sortBy, sortOrder, filters, query);
           values.push(...qv);
-          whereClause = `${w || ""} ${searchClause || ""}`.trim();
+          whereCondition = `${whereClause || ""} ${searchClause || ""}`.trim();
         }
 
         client = await pgPool.connect();
 
-        // Generate unique table name based on UUID
-        const tempTableName = `temp_filtered_data_${uuidv4().replace(
-          /-/g,
-          "_"
-        )}`;
-
-        // Create temporary table with unique name per request
+        await client.query(`DROP TABLE IF EXISTS temp_filtered_data`);
         await client.query(
-          `CREATE TEMP TABLE ${tempTableName} AS
+          `CREATE TEMP TABLE temp_filtered_data AS
           SELECT event_ma_id, artist_sp_genre, artist_wd_country, track_sp_key, ${metrics.join(
             ", "
           )}
-          FROM event_flat ${whereClause};`,
+          FROM event_flat
+          ${whereCondition};`,
           values
         );
 
-        await client.query(`ANALYZE ${tempTableName}`);
+        // Total Count
+        const countResult = await client.query(
+          `SELECT COUNT(*) AS total FROM temp_filtered_data`
+        );
+        const totalCount = parseInt(countResult.rows[0].total);
 
-        // Histogram chunk per metric
-        for (const metric of metrics) {
+        // Begin streaming
+        controller.enqueue(encoder.encode('{"data":{'));
+
+        // Stream histograms
+        controller.enqueue(encoder.encode('"his":{'));
+        for (let i = 0; i < metrics.length; i++) {
+          const metric = metrics[i];
           const [min, max] = rangeFilterMap[metric]?.range ?? [0, 1];
           const step = (max - min) / hisNum;
 
-          const query = `
-            SELECT width_bucket(${metric}, ${min}, ${max}, ${hisNum}) AS bucket,
-                   COUNT(*) AS count
-            FROM ${tempTableName}
-            WHERE ${metric} IS NOT NULL
-              AND ${metric} BETWEEN ${min} AND ${max}
+          const res = await client.query(
+            `
+            SELECT width_bucket(${metric}, $1, $2, $3) AS bucket, COUNT(*) AS count
+            FROM temp_filtered_data
+            WHERE ${metric} IS NOT NULL AND ${metric} BETWEEN $1 AND $2
             GROUP BY bucket ORDER BY bucket
-          `;
+            `,
+            [min, max, hisNum]
+          );
 
-          const res = await client.query(query);
           const bucketMap = new Map(
             res.rows.map((r) => [parseInt(r.bucket), parseInt(r.count)])
           );
@@ -85,92 +87,95 @@ export async function POST(req) {
           ]);
           const y = x.map((_, i) => bucketMap.get(i + 1) || 0);
 
+          const comma = i > 0 ? "," : "";
           controller.enqueue(
             encoder.encode(
-              `event: histogram\ndata: ${JSON.stringify({
-                metric,
-                data: { x, y, xrange: [min, max] },
-              })}\n\n`
+              `${comma}"${metric}":${JSON.stringify({
+                x,
+                y,
+                xrange: [min, max],
+              })}`
             )
           );
         }
+        controller.enqueue(encoder.encode("},"));
 
-        // Rankings query
+        // Rankings
         const rankQuery = `
-          (
+          SELECT * FROM (
             SELECT 'genre' AS type, genre AS title, COUNT(*) AS count
-            FROM ${tempTableName}, unnest(artist_sp_genre) AS genre
+            FROM temp_filtered_data, unnest(artist_sp_genre) AS genre
             WHERE artist_sp_genre IS NOT NULL
             GROUP BY genre
             ORDER BY count DESC
             LIMIT 10
-          )
+          ) AS genre_data
+
           UNION ALL
-          (
+
+          SELECT * FROM (
             SELECT 'country' AS type, artist_wd_country AS title, COUNT(*) AS count
-            FROM ${tempTableName}
+            FROM temp_filtered_data
             WHERE artist_wd_country IS NOT NULL
             GROUP BY artist_wd_country
             ORDER BY count DESC
             LIMIT 10
-          )
+          ) AS country_data
+
           UNION ALL
-          (
+
+          SELECT * FROM (
             SELECT 'key' AS type, key AS title, COUNT(*) AS count
-            FROM ${tempTableName}, unnest(track_sp_key) AS key
+            FROM temp_filtered_data, unnest(track_sp_key) AS key
             WHERE track_sp_key IS NOT NULL
             GROUP BY key
             ORDER BY count DESC
             LIMIT 10
-          )
+          ) AS key_data
         `;
-
         const rankRes = await client.query(rankQuery);
-        const rankData = {
+        const rank = {
           artist_sp_genre: [],
           artist_wd_country: [],
           track_sp_key: [],
         };
-        for (const row of rankRes.rows) {
-          const obj = { title: row.title, count: parseInt(row.count) };
-          if (row.type === "genre") rankData.artist_sp_genre.push(obj);
-          else if (row.type === "country") rankData.artist_wd_country.push(obj);
-          else if (row.type === "key") rankData.track_sp_key.push(obj);
-        }
 
+        rankRes.rows.forEach((row) => {
+          const item = { title: row.title, count: parseInt(row.count) };
+          if (row.type === "genre") rank.artist_sp_genre.push(item);
+          else if (row.type === "country") rank.artist_wd_country.push(item);
+          else if (row.type === "key") rank.track_sp_key.push(item);
+        });
+
+        controller.enqueue(encoder.encode(`"rank":${JSON.stringify(rank)},`));
+
+        const executionTime = Date.now() - startTime;
         controller.enqueue(
           encoder.encode(
-            `event: rankings\ndata: ${JSON.stringify(rankData)}\n\n`
+            `"totalCount":${totalCount},"executionTime":"${executionTime}ms"`
           )
         );
-
-        const timeTaken = Date.now() - startTime;
-        controller.enqueue(
-          encoder.encode(
-            `event: done\ndata: {"executionTime": "${timeTaken}ms"}\n\n`
-          )
-        );
+        controller.enqueue(encoder.encode("}}"));
         controller.close();
-      } catch (err) {
-        controller.enqueue(
-          encoder.encode(
-            `event: error\ndata: ${JSON.stringify({ error: err.message })}\n\n`
-          )
-        );
+      } catch (error) {
+        console.error("API Stream Error:", error);
+        controller.enqueue(encoder.encode(`"error":"${error.message}"}}`));
         controller.close();
       } finally {
-        try {
-          client?.release();
-        } catch {}
+        if (client) {
+          try {
+            await client.query("DROP TABLE IF EXISTS temp_filtered_data");
+          } catch (e) {}
+          client.release();
+        }
       }
     },
   });
 
   return new NextResponse(stream, {
     headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
     },
   });
 }

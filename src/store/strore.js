@@ -149,7 +149,7 @@ const useStore = create((set, get) => {
       }
     },
     requestVizdata: async (ids, filters, query) => {
-      // Cancel previous request if still active
+      // Cancel any previous request
       const prev = get().currentControllerVizdata;
       if (prev) prev.abort();
 
@@ -157,42 +157,87 @@ const useStore = create((set, get) => {
       set({ currentControllerVizdata: controller });
 
       setLoading("vizdata", true);
+      set({ vizdata: { histograms: {}, rankings: {}, executionTime: null } });
 
       try {
-        // Use axios for consistency and better error handling
-        const response = await axios.post(
-          `${APIUrl}/meta/viz`,
-          {
+        const response = await fetch(`${APIUrl}/meta/viz`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             ids,
             filters,
             query,
-            metrics: null, // Pass null to get all metrics
-          },
-          {
-            signal: controller.signal,
-            responseType: "json", // Expecting JSON response
+            metrics: null,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.body) throw new Error("No response body from stream");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const histograms = {};
+        const rankings = {};
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop(); // Save the partial for next loop
+
+          for (const part of parts) {
+            const lines = part.trim().split("\n");
+            const event = lines
+              .find((l) => l.startsWith("event:"))
+              ?.slice(7)
+              .trim();
+            const dataLine = lines
+              .find((l) => l.startsWith("data:"))
+              ?.slice(6)
+              .trim();
+
+            if (!event || !dataLine) continue;
+
+            const data = JSON.parse(dataLine);
+
+            if (event === "histogram") {
+              histograms[data.metric] = data.data;
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  his: { ...histograms },
+                },
+              }));
+            } else if (event === "rankings") {
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  rank: data,
+                },
+              }));
+            } else if (event === "done") {
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  executionTime: data.executionTime,
+                },
+              }));
+            } else if (event === "error") {
+              console.error("Stream error:", data.error);
+              set({ error: data.error });
+            }
           }
-        );
-
-        // Process the response data
-        if (response.data && response.data.data) {
-          // // Update store with histograms and rankings
-          // const { his, rank } = response.data.data;
-
-          // // Create a comprehensive vizdata object with all data
-          // const newVizdata = {
-          //   histograms: his || {},
-          //   rankings: rank || {},
-          // };
-
-          // // Update the store with the full data
-          set({ vizdata: response.data.data });
         }
 
         setLoading("vizdata", false);
       } catch (error) {
         if (error.name !== "AbortError") {
-          console.error("VizData request error:", error);
+          console.error("VizData stream error:", error);
           set({ error: error.message });
         }
         setLoading("vizdata", false);
