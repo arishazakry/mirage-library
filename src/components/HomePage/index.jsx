@@ -10,6 +10,7 @@ import {
   AArrowDown,
   AArrowUp,
   ALargeSmall,
+  GalleryThumbnails,
   Languages,
   LayoutDashboard,
   Moon,
@@ -71,6 +72,11 @@ export default function HomePage() {
             >
               {theme === "dark" ? <Moon /> : <Sun />}
             </Toggle>
+            <Link href="/gallery" className="text-sm" target="_blank">
+              <Button variant="ghost" size="icon">
+                <GalleryThumbnails />
+              </Button>
+            </Link>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon">

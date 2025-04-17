@@ -172,7 +172,13 @@ function VizPanel({
             </div>
           </div>
         </div>
-        <Barchart data={rankdata} />
+        <PlotlHolder
+          title={`Top 10 ${colorKey}`}
+          isHideTitle={true}
+          type="ranking"
+        >
+          <Barchart data={rankdata} />
+        </PlotlHolder>
       </Card>
       <Separator className="my-4" />
       <div className="flex flex-col items-center">

@@ -1,7 +1,7 @@
 "use client";
 import { useChartStore } from "@/store/chartstore";
 import { useTheme } from "next-themes";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   PlusIcon,
   Group,
   GitCompare,
+  Download,
 } from "lucide-react";
 import {
   ResizableHandle,
@@ -34,6 +35,8 @@ import {
 import HistogramDis from "../VizPanel/HistogramDis";
 import { Badge } from "../ui/badge";
 import { useSwipeable } from "react-swipeable";
+import Barchart from "../VizPanel/Barchart";
+import { ScrollArea } from "../ui/scroll-area";
 
 export default function ChartGallery() {
   const {
@@ -145,10 +148,36 @@ export default function ChartGallery() {
     setEditingGroupName(""); // Reset input field
     setGroupBeingRenamed(""); // Clear group being renamed
   };
-
+  const renderChart = useCallback(
+    (chart, isStatis) => (
+      <>
+        {chart.type === "histogram" && (
+          <HistogramDis
+            name={chart.title}
+            data={chart.data}
+            theme={theme}
+            config={isStatis ? { staticPlot: true } : {}}
+          />
+        )}
+        {chart.type === "ranking" && <Barchart data={chart.data} />}
+      </>
+    ),
+    [theme]
+  );
+  const exportData = useCallback(() => {
+    downloadMIRAGEGalleryJSON(charts);
+  }, [charts]);
   return (
     <div className="mx-auto p-4 space-y-6 flex flex-col min-h-dvh">
-      <h1 className="text-3xl font-bold mb-6">Interactive Chart Gallery</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold mb-6">Interactive Chart Gallery</h1>
+        <div>
+          <Button variant="outline" className="mr-2" onClick={exportData}>
+            <Download /> Export
+          </Button>
+        </div>
+      </div>
+
       <ResizablePanelGroup
         direction="vertical"
         className=" w-full h-full grow rounded-lg border"
@@ -248,126 +277,120 @@ export default function ChartGallery() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="mb-4"
                 />
-
-                {/* 🖼️ Chart Gallery */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {filteredCharts.length === 0 ? (
-                    <p className="text-gray-500">No matching charts.</p>
-                  ) : (
-                    filteredCharts.map((chart) => (
-                      <Card
-                        key={chart.id}
-                        className="hover:shadow-lg transition-shadow"
-                      >
-                        <CardHeader className="flex items-center justify-between">
-                          {editingChartId === chart.id ? (
-                            <div className="flex gap-2 items-center w-full">
-                              <Input
-                                value={newChartName}
-                                onChange={(e) =>
-                                  setNewChartName(e.target.value)
-                                }
-                                placeholder={chart.title}
-                                className="text-sm flex-grow"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRenameChart(chart.id)}
-                              >
-                                <CheckIcon className="h-4 w-4 text-green-500" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setEditingChartId(null);
-                                  setNewChartName("");
-                                }}
-                              >
-                                <XIcon className="h-4 w-4 text-gray-500" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex justify-between items-center w-full">
-                              <CardTitle className="text-sm">
-                                {chart.title || "Unnamed Chart"}
-                              </CardTitle>
-                              <div className="flex gap-2">
+                <ScrollArea className="h-full mb-4">
+                  {/* 🖼️ Chart Gallery */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {filteredCharts.length === 0 ? (
+                      <p className="text-gray-500">No matching charts.</p>
+                    ) : (
+                      filteredCharts.map((chart) => (
+                        <Card
+                          key={chart.id}
+                          className="hover:shadow-lg transition-shadow"
+                        >
+                          <CardHeader className="flex items-center justify-between">
+                            {editingChartId === chart.id ? (
+                              <div className="flex gap-2 items-center w-full">
+                                <Input
+                                  value={newChartName}
+                                  onChange={(e) =>
+                                    setNewChartName(e.target.value)
+                                  }
+                                  placeholder={chart.title}
+                                  className="text-sm flex-grow"
+                                />
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => setEditingChartId(chart.id)}
+                                  onClick={() => handleRenameChart(chart.id)}
                                 >
-                                  <EditIcon className="h-4 w-4 text-blue-500" />
+                                  <CheckIcon className="h-4 w-4 text-green-500" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => removeChart(chart.id)}
+                                  onClick={() => {
+                                    setEditingChartId(null);
+                                    setNewChartName("");
+                                  }}
                                 >
-                                  <Trash2Icon className="h-4 w-4 text-red-500" />
-                                </Button>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <FolderIcon className="h-4 w-4 text-gray-500" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-56 p-2">
-                                    <Command>
-                                      <CommandInput placeholder="Search groups..." />
-                                      <CommandList>
-                                        {Object.keys(groups).map(
-                                          (groupName) => (
-                                            <CommandItem
-                                              key={groupName}
-                                              onSelect={() =>
-                                                addChartToGroup(
-                                                  groupName,
-                                                  chart.id
-                                                )
-                                              }
-                                            >
-                                              {groupName}
-                                            </CommandItem>
-                                          )
-                                        )}
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => addToComparison(chart)}
-                                >
-                                  <GitCompare className="h-4 w-4 " />
+                                  <XIcon className="h-4 w-4 text-gray-500" />
                                 </Button>
                               </div>
-                            </div>
-                          )}
-                        </CardHeader>
-                        <CardContent>
-                          {/* 📊 Chart Preview */}
-                          <div className="w-full aspect-[2/1]">
-                            {chart.type === "histogram" && (
-                              <HistogramDis
-                                name={chart.title}
-                                data={chart.data}
-                                theme={theme}
-                                config={{ staticPlot: true }}
-                              />
+                            ) : (
+                              <div className="flex justify-between items-center w-full">
+                                <CardTitle className="text-sm">
+                                  {chart.title || "Unnamed Chart"}
+                                </CardTitle>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setEditingChartId(chart.id)}
+                                  >
+                                    <EditIcon className="h-4 w-4 text-blue-500" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeChart(chart.id)}
+                                  >
+                                    <Trash2Icon className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                        <FolderIcon className="h-4 w-4 text-gray-500" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56 p-2">
+                                      <Command>
+                                        <CommandInput placeholder="Search groups..." />
+                                        <CommandList>
+                                          {Object.keys(groups).map(
+                                            (groupName) => (
+                                              <CommandItem
+                                                key={groupName}
+                                                onSelect={() =>
+                                                  addChartToGroup(
+                                                    groupName,
+                                                    chart.id
+                                                  )
+                                                }
+                                              >
+                                                {groupName}
+                                              </CommandItem>
+                                            )
+                                          )}
+                                        </CommandList>
+                                      </Command>
+                                    </PopoverContent>
+                                  </Popover>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => addToComparison(chart)}
+                                  >
+                                    <GitCompare className="h-4 w-4 " />
+                                  </Button>
+                                </div>
+                              </div>
                             )}
-                          </div>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Created: {chart.createdAt}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
+                          </CardHeader>
+                          <CardContent>
+                            {/* 📊 Chart Preview */}
+                            <div className="w-full aspect-[2/1]">
+                              {renderChart(chart, true)}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Created: {chart.createdAt}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -393,13 +416,7 @@ export default function ChartGallery() {
                         >
                           <span>{chart.title || "Unnamed Chart"}</span>
                           <div className="h-full aspect-[2/1] grow">
-                            {chart.type === "histogram" && (
-                              <HistogramDis
-                                name={chart.title}
-                                data={chart.data}
-                                theme={theme}
-                              />
-                            )}
+                            {renderChart(chart)}
                           </div>
                         </div>
                       ))}
@@ -413,4 +430,18 @@ export default function ChartGallery() {
       </ResizablePanelGroup>
     </div>
   );
+}
+export function downloadMIRAGEGalleryJSON(data) {
+  const jsonStr = JSON.stringify(data, null, 2); // pretty print
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "MIRAGE_gallery.json";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
 }

@@ -20,6 +20,7 @@ export default function PlotlHolder({
   onSave,
   title,
   chartData,
+  isHideTitle = false,
 }) {
   const { query } = useStore();
   const filters = useSelector(selectFilters);
@@ -56,7 +57,7 @@ export default function PlotlHolder({
   return (
     <Card className="w-full h-full flex flex-col" id={chart_id}>
       <CardHeader className="px-4 py-3 relative">
-        <CardTitle className="text-lg">{title}</CardTitle>
+        {!isHideTitle && <CardTitle className="text-lg">{title}</CardTitle>}
         {!hideSaveButton && (
           <Button
             onClick={handleSave}
