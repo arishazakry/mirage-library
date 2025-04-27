@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useState, useMemo } from "react";
-import Histogram from "./Histogram";
-import Scatterwrapper from "./Scatterwrapper";
-import PCAplot from "./PCAplot";
+// import Histogram from "./Histogram";
+// import Scatterwrapper from "./Scatterwrapper";
+// import PCAplot from "./PCAplot";
 import { scaleOrdinal, maxIndex, rollup, color } from "d3";
 import { isArray } from "lodash";
 import Barchart from "./Barchart";
@@ -26,18 +26,25 @@ import {
   InputMultiSelectTrigger,
 } from "../ui/InputMultiSelectTrigger";
 import { Separator } from "../ui/separator";
+import Scatterplot from "./Scatterplot";
+import ScatterplotExt from "./ScatterplotExt";
+import Heatmap from "./Heatmap";
+import Contour from "./Contour";
 
 const TOP = 10;
 function VizPanel({
   data,
-  histMetrics,
   source,
+  histMetrics,
   onChangehistMetrics,
+  scatterMetrics,
+  onChangescatterMetrics,
   onChangeSource,
   onSelect,
 }) {
   const [histindata, sethisindata] = useState([]);
   const [rankdata, setrankdata] = useState([]);
+  const [scatterdata, setscatterdata] = useState([]);
   const [colorKey, setColorKey] = useState(rankMetricList[0].key);
   const [hovered, sethovered] = useState(null);
   const { resolvedTheme } = useTheme();
@@ -75,7 +82,20 @@ function VizPanel({
         data: data?.his?.[key] ?? {},
       }));
     sethisindata(histindata);
-  }, [data, histMetrics]);
+  }, [data?.his, histMetrics]);
+
+  useEffect(() => {
+    const scatter = data?.scatter?.[scatterMetrics];
+    if (scatter) {
+      setscatterdata([
+        {
+          key: scatter.metric.join(","),
+          label: scatter.metric.join(","),
+          data: scatter,
+        },
+      ]);
+    }
+  }, [data?.scatter, scatterMetrics]);
   const onHover = useCallback((data) => {
     sethovered(data);
   }, []);
@@ -87,20 +107,6 @@ function VizPanel({
   });
 
   useEffect(() => {
-    // const countMap = {};
-    // data?.rank?.forEach((d) => {
-    //   if (isArray(d[colorKey])) {
-    //     d[colorKey].forEach((e) => (countMap[e] = (countMap[e] ?? 0) + 1));
-    //   } else if (d[colorKey] && d[colorKey] !== null) {
-    //     countMap[d[colorKey]] = (countMap[d[colorKey]] ?? 0) + 1;
-    //   }
-    // });
-    // let rankData = [];
-    // Object.keys(countMap).forEach((k) => {
-    //   rankData.push({ title: k, count: countMap[k] });
-    // });
-    // rankData.sort((a, b) => b.count - a.count);
-    // rankData = rankData.slice(0, TOP);
     setrankdata(data?.rank?.[colorKey] ?? []);
   }, [colorKey, data]);
   useEffect(() => {
@@ -209,7 +215,96 @@ function VizPanel({
           </div>
         ))}
       </div>
-
+      <div className="flex flex-col items-center">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-primary">2D Plot</h3>
+          <div>
+            <Select
+              value={scatterMetrics[0]}
+              onValueChange={(value) => onChangescatterMetrics(value, 0)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="x" />
+              </SelectTrigger>
+              <SelectContent>
+                {metricListOp.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={scatterMetrics[1]}
+              onValueChange={(value) => onChangescatterMetrics(value, 1)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="y" />
+              </SelectTrigger>
+              <SelectContent>
+                {metricListOp.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-center text-center">
+        {scatterdata.map(({ key, label, data }) => (
+          <div key={`scatter_${key}`} className="w-full relative flex flex-col">
+            <div className="w-full aspect-square">
+              <PlotlHolder title={label} type="scatterplot">
+                <ScatterplotExt
+                  data={data}
+                  theme={theme}
+                  // onSelect={onSelect}
+                  // onHover={onHover}
+                  // hovered={hovered}
+                  // getColor={rankMap}
+                />
+              </PlotlHolder>
+            </div>
+            {/* <h4>{label}</h4> */}
+          </div>
+        ))}
+        {scatterdata.map(({ key, label, data }) => (
+          <div key={`heatmap_${key}`} className="w-full relative flex flex-col">
+            <div className="w-full aspect-square">
+              <PlotlHolder title={label} type="heatmap">
+                <Heatmap
+                  data={data}
+                  theme={theme}
+                  // onSelect={onSelect}
+                  // onHover={onHover}
+                  // hovered={hovered}
+                  // getColor={rankMap}
+                />
+              </PlotlHolder>
+            </div>
+            {/* <h4>{label}</h4> */}
+          </div>
+        ))}
+        {scatterdata.map(({ key, label, data }) => (
+          <div key={`heatmap_${key}`} className="w-full relative flex flex-col">
+            <div className="w-full aspect-square">
+              <PlotlHolder title={label} type="contour">
+                <Contour
+                  data={data}
+                  theme={theme}
+                  // onSelect={onSelect}
+                  // onHover={onHover}
+                  // hovered={hovered}
+                  // getColor={rankMap}
+                />
+              </PlotlHolder>
+            </div>
+            {/* <h4>{label}</h4> */}
+          </div>
+        ))}
+      </div>
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Scatterwrapper
           data={data}

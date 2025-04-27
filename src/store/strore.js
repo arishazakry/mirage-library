@@ -34,6 +34,7 @@ const useStore = create((set, get) => {
     locationData: [],
     countries: [],
     histMetrics: ["track_sp_year"],
+    scatterMetrics: ["track_sp_energy", "track_sp_liveness"],
     fields: { value: { stationData: [], locationData: [] } },
     event_export_list: { value: {} },
     vizdata: {},
@@ -50,6 +51,9 @@ const useStore = create((set, get) => {
     setLoading,
     sethistMetrics: (metrics) => {
       set({ histMetrics: metrics });
+    },
+    setscatterMetrics: (metrics) => {
+      set({ scatterMetrics: metrics });
     },
     setError: (path, error) =>
       set((state) => ({
@@ -156,6 +160,7 @@ const useStore = create((set, get) => {
       // Cancel any previous request
       const prev = get().currentControllerVizdata;
       const metrics = get().histMetrics;
+      const scatterMetrics = get().scatterMetrics;
       if (prev) prev.abort();
 
       const controller = new AbortController();
@@ -173,6 +178,7 @@ const useStore = create((set, get) => {
             filters,
             query,
             metrics,
+            scatterMetrics,
           }),
           signal: controller.signal,
         });
@@ -184,7 +190,7 @@ const useStore = create((set, get) => {
         let buffer = "";
 
         const histograms = {};
-        const rankings = {};
+        const scatters = {};
 
         while (true) {
           const { done, value } = await reader.read();
@@ -223,6 +229,14 @@ const useStore = create((set, get) => {
                 vizdata: {
                   ...prev.vizdata,
                   rank: data,
+                },
+              }));
+            } else if (event === "scatter") {
+              scatters[data.metric] = data;
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  scatter: { ...scatters },
                 },
               }));
             } else if (event === "done") {
@@ -315,6 +329,92 @@ const useStore = create((set, get) => {
                   his: {
                     ...prev.vizdata.his,
                     [data.metric]: data.data,
+                  },
+                },
+              }));
+            } else if (event === "error") {
+              console.error("Stream error:", data.error);
+              set({ error: data.error });
+            }
+          }
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("Histogram stream error:", error);
+          set({ error: error.message });
+        }
+      }
+    },
+    updateVizScatter: async (ids, filters, query, metrics) => {
+      const { vizdata } = get();
+      // Determine which metrics are already available
+      const existingMetrics = new Set(Object.keys(vizdata.scatter || {}));
+      const missingMetrics = !existingMetrics.has(metrics.join(","))
+        ? metrics
+        : [];
+      if (missingMetrics.length === 0) return; // All metrics already available
+
+      // Cancel any previous histogram update stream
+      const prev = get().currentControllerVizdata;
+      if (prev) prev.abort();
+
+      const controller = new AbortController();
+      set({ currentControllerVizdata: controller });
+
+      try {
+        if (metrics.length !== 2) return;
+        const response = await fetch(`${APIUrl}/meta/viz/scatter`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ids,
+            filters,
+            query,
+            metrics: missingMetrics,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.body) throw new Error("No response body from stream");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const newHistograms = {};
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop(); // Save the partial for next loop
+
+          for (const part of parts) {
+            const lines = part.trim().split("\n");
+            const event = lines
+              .find((l) => l.startsWith("event:"))
+              ?.slice(7)
+              .trim();
+            const dataLine = lines
+              .find((l) => l.startsWith("data:"))
+              ?.slice(6)
+              .trim();
+
+            if (!event || !dataLine) continue;
+
+            const data = JSON.parse(dataLine);
+
+            if (event === "scatter") {
+              newHistograms[data.metric] = data;
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  scatter: {
+                    ...prev.vizdata.scatter,
+                    [data.metric]: data,
                   },
                 },
               }));

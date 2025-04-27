@@ -1,0 +1,10 @@
+.js-plotly-plot {
+  .main-svg {
+    .cartesianlayer .mlayer .points .point path {
+      @apply !fill-primary;
+    }
+    .gridlayer .ygrid.crisp {
+      @apply !stroke-current opacity-20;
+    }
+  }
+}

@@ -63,8 +63,6 @@ const AutocompleteInput = ({
     return () => document.removeEventListener("click", handleClickOutside);
   }, [open]);
 
-  console.log(inputValue, suggestions);
-
   return (
     <div className="space-y-2">
       <Popover open={open} onOpenChange={setOpen}>

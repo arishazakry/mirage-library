@@ -4,6 +4,7 @@ import pgPool from "../../config/postgresql.js";
 import { metricList } from "@/lib/utils.js";
 import { rangeFilterMap } from "../../filters/available/route.js";
 import { v4 as uuidv4 } from "uuid"; // Import UUID library
+import { getScatterData } from "./scatter/route.js";
 
 export const revalidate = 60;
 
@@ -17,7 +18,15 @@ export async function POST(req) {
 
       try {
         const body = await req.json();
-        let { ids, query, filters, sortBy, sortOrder = "ASC", metrics } = body;
+        let {
+          ids,
+          query,
+          filters,
+          sortBy,
+          sortOrder = "ASC",
+          metrics,
+          scatterMetrics = ["track_sp_energy", "track_sp_liveness"],
+        } = body;
 
         const validMetrics = new Set(metricList.map((d) => d.key));
         metrics =
@@ -50,11 +59,18 @@ export async function POST(req) {
         )}`;
 
         // Create temporary table with unique name per request
+        const metricsCombine = {};
+        metrics.forEach((metric) => {
+          metricsCombine[metric] = 1;
+        });
+        scatterMetrics.forEach((metric) => {
+          metricsCombine[metric] = 1;
+        });
         await client.query(
           `CREATE TEMP TABLE ${tempTableName} AS
-          SELECT event_ma_id, artist_sp_genre, artist_wd_country, track_sp_key, ${metrics.join(
-            ", "
-          )}
+          SELECT event_ma_id, artist_sp_genre, artist_wd_country, track_sp_key, ${Object.keys(
+            metricsCombine
+          ).join(", ")}
           FROM event_flat ${whereClause};`,
           values
         );
@@ -143,6 +159,19 @@ export async function POST(req) {
             `event: rankings\ndata: ${JSON.stringify(rankData)}\n\n`
           )
         );
+
+        if (scatterMetrics && scatterMetrics.length > 1) {
+          await getScatterData(
+            client,
+            tempTableName,
+            scatterMetrics[0],
+            scatterMetrics[1],
+            rangeFilterMap,
+            50,
+            controller,
+            encoder
+          );
+        }
 
         const timeTaken = Date.now() - startTime;
         controller.enqueue(
