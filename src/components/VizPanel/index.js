@@ -30,6 +30,7 @@ import Scatterplot from "./Scatterplot";
 import ScatterplotExt from "./ScatterplotExt";
 import Heatmap from "./Heatmap";
 import Contour from "./Contour";
+import TwoDPlot from "./TwoDPlot";
 
 const TOP = 10;
 function VizPanel({
@@ -215,95 +216,14 @@ function VizPanel({
           </div>
         ))}
       </div>
-      <div className="flex flex-col items-center">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-primary">2D Plot</h3>
-          <div>
-            <Select
-              value={scatterMetrics[0]}
-              onValueChange={(value) => onChangescatterMetrics(value, 0)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="x" />
-              </SelectTrigger>
-              <SelectContent>
-                {metricListOp.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={scatterMetrics[1]}
-              onValueChange={(value) => onChangescatterMetrics(value, 1)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="y" />
-              </SelectTrigger>
-              <SelectContent>
-                {metricListOp.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-center text-center">
-        {scatterdata.map(({ key, label, data }) => (
-          <div key={`scatter_${key}`} className="w-full relative flex flex-col">
-            <div className="w-full aspect-square">
-              <PlotlHolder title={label} type="scatterplot">
-                <ScatterplotExt
-                  data={data}
-                  theme={theme}
-                  // onSelect={onSelect}
-                  // onHover={onHover}
-                  // hovered={hovered}
-                  // getColor={rankMap}
-                />
-              </PlotlHolder>
-            </div>
-            {/* <h4>{label}</h4> */}
-          </div>
-        ))}
-        {scatterdata.map(({ key, label, data }) => (
-          <div key={`heatmap_${key}`} className="w-full relative flex flex-col">
-            <div className="w-full aspect-square">
-              <PlotlHolder title={label} type="heatmap">
-                <Heatmap
-                  data={data}
-                  theme={theme}
-                  // onSelect={onSelect}
-                  // onHover={onHover}
-                  // hovered={hovered}
-                  // getColor={rankMap}
-                />
-              </PlotlHolder>
-            </div>
-            {/* <h4>{label}</h4> */}
-          </div>
-        ))}
-        {scatterdata.map(({ key, label, data }) => (
-          <div key={`heatmap_${key}`} className="w-full relative flex flex-col">
-            <div className="w-full aspect-square">
-              <PlotlHolder title={label} type="contour">
-                <Contour
-                  data={data}
-                  theme={theme}
-                  // onSelect={onSelect}
-                  // onHover={onHover}
-                  // hovered={hovered}
-                  // getColor={rankMap}
-                />
-              </PlotlHolder>
-            </div>
-            {/* <h4>{label}</h4> */}
-          </div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 justify-center text-center">
+        <TwoDPlot
+          metricListOp={metricListOp}
+          scatterMetrics={scatterMetrics}
+          onChangescatterMetrics={onChangescatterMetrics}
+          scatterdata={scatterdata}
+          theme={theme}
+        />
       </div>
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Scatterwrapper

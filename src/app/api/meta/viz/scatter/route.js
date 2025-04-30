@@ -25,7 +25,7 @@ export async function POST(req) {
             "Exactly two metrics must be provided for scatter plot."
           );
         }
-        const hisNum = 10;
+        const hisNum = 50;
         const values = [];
         const [xMetric, yMetric] = metrics;
         let whereClause = "";

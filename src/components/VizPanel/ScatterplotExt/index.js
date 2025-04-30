@@ -40,7 +40,6 @@ export default function ScatterplotExt({
   }, []);
   useEffect(() => {
     if (!data) return;
-    console.log(data);
     const x = [];
     const y = [];
     const r = [];

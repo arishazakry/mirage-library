@@ -4,9 +4,10 @@ import { extent, range, scaleBand, scaleQuantize, scaleSqrt } from "d3";
 import { metricList } from "@/lib/utils";
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 import "./index.css";
+import scatter2bin from "../binutil";
 
 export default function Heatmap({
-  data,
+  data: raw,
   xname,
   yname,
   height,
@@ -39,34 +40,46 @@ export default function Heatmap({
     return () => observer.disconnect();
   }, []);
   useEffect(() => {
-    if (!data) return;
-    if (data.mode != "binned") set_Data([]);
-    console.log(data);
-    const x = [];
-    const y = [];
-    const xScale = scaleQuantize()
-      .range(range((data.xrange[1] - data.xrange[0]) / data.stepX))
-      .domain(data.xrange);
-    const yScale = scaleQuantize()
-      .range(range((data.yrange[1] - data.yrange[0]) / data.stepY))
-      .domain(data.yrange);
-    const z = yScale.range().map(() => xScale.range().map(() => null));
+    if (!raw) return;
+    let data = { ...raw };
+    if (raw.mode != "binned") {
+      // binning data
+      data = { ...data, ...scatter2bin(raw.data, 50), mode: "scatter" };
+    }
+    if (data.data.length) {
+      const xScale = scaleQuantize()
+        .range(range((data.xrange[1] - data.xrange[0]) / data.stepX))
+        .domain(data.xrange);
+      const yScale = scaleQuantize()
+        .range(range((data.yrange[1] - data.yrange[0]) / data.stepY))
+        .domain(data.yrange);
+      const x = xScale.range().map((d) => (d + 0.5) * data.stepX);
+      const y = yScale.range().map((d) => (d + 0.5) * data.stepY);
 
-    data.data.forEach((d) => {
-      z[yScale(d.y)][xScale(d.x)] = d.count;
-    });
-    const trace = [
-      {
-        x,
-        y,
-        z,
-        type: "heatmap",
-        hoverongaps: false,
-      },
-    ];
+      const z = yScale.range().map(() => xScale.range().map(() => null));
 
-    set_Data(trace);
-  }, [data, hovered, color]);
+      data.data.forEach((d) => {
+        z[yScale(d.y)][xScale(d.x)] = d.count;
+      });
+      const trace = [
+        {
+          x,
+          y,
+          z,
+          type: "heatmap",
+          hoverongaps: false,
+          colorbar: {
+            thickness: 5,
+            len: 1,
+            xpad: 2,
+            title: "Count",
+          },
+        },
+      ];
+
+      set_Data(trace);
+    } else set_Data([]);
+  }, [raw, hovered, color]);
   const handleSelected = (event) => {
     const points = event.points;
     const selected = {};
@@ -76,14 +89,14 @@ export default function Heatmap({
   };
   useEffect(() => {
     const title = { x: xname, y: yname };
-    if (data) {
-      const xname = data?.metric?.[0];
-      const yname = data?.metric?.[1];
+    if (raw) {
+      const xname = raw?.metric?.[0];
+      const yname = raw?.metric?.[1];
       if (xname) title.x = metricList.find((d) => d.key === xname)?.label;
       if (yname) title.y = metricList.find((d) => d.key === yname)?.label;
     }
     setTitle(title);
-  }, [data, xname, yname]);
+  }, [raw, xname, yname]);
   return (
     <div ref={containerRef} className="w-full h-full min-h-[50px]">
       <Plot
@@ -93,8 +106,8 @@ export default function Heatmap({
           responsive: true,
           width: size.width,
           height: size.height,
-          xaxis: { title: { text: title.x } },
-          yaxis: { title: { text: title.y } },
+          xaxis: { title: { text: title.x, standoff: 5 } },
+          yaxis: { title: { text: title.y, standoff: 5 } },
           font: {
             family: theme.fontFamily,
             size: theme.fontSize,
@@ -103,7 +116,7 @@ export default function Heatmap({
           autoscale: false,
           height: height,
           width: width,
-          margin: { t: 10, r: 10 },
+          margin: { t: 5, r: 5, b: 45, l: 45 },
           paper_bgcolor: "transparent",
           plot_bgcolor: "transparent",
           showlegend: false,

@@ -26,6 +26,7 @@ import {
   Group,
   GitCompare,
   Download,
+  ScatterChart,
 } from "lucide-react";
 import {
   ResizableHandle,
@@ -37,6 +38,9 @@ import { Badge } from "../ui/badge";
 import { useSwipeable } from "react-swipeable";
 import Barchart from "../VizPanel/Barchart";
 import { ScrollArea } from "../ui/scroll-area";
+import ScatterplotExt from "../VizPanel/ScatterplotExt";
+import Heatmap from "../VizPanel/Heatmap";
+import Contour from "../VizPanel/Contour";
 
 export default function ChartGallery() {
   const {
@@ -160,6 +164,27 @@ export default function ChartGallery() {
           />
         )}
         {chart.type === "ranking" && <Barchart data={chart.data} />}
+        {chart.type === "scatter" && (
+          <ScatterplotExt
+            data={chart.data}
+            theme={theme}
+            config={isStatis ? { staticPlot: true } : {}}
+          />
+        )}
+        {chart.type === "heatmap" && (
+          <Heatmap
+            data={chart.data}
+            theme={theme}
+            config={isStatis ? { staticPlot: true } : {}}
+          />
+        )}
+        {chart.type === "contour" && (
+          <Contour
+            data={chart.data}
+            theme={theme}
+            config={isStatis ? { staticPlot: true } : {}}
+          />
+        )}
       </>
     ),
     [theme]
@@ -286,7 +311,7 @@ export default function ChartGallery() {
                       filteredCharts.map((chart) => (
                         <Card
                           key={chart.id}
-                          className="hover:shadow-lg transition-shadow"
+                          className={`hover:shadow-lg transition-shadow relative aspect-[2/1]`}
                         >
                           <CardHeader className="flex items-center justify-between">
                             {editingChartId === chart.id ? (
@@ -379,8 +404,12 @@ export default function ChartGallery() {
                           </CardHeader>
                           <CardContent>
                             {/* 📊 Chart Preview */}
-                            <div className="w-full aspect-[2/1]">
-                              {renderChart(chart, true)}
+                            <div className="w-full gird grid-cols-1 ">
+                              <div
+                                className={`relative aspect-${getApect(chart)}`}
+                              >
+                                {renderChart(chart, true)}
+                              </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-2">
                               Created: {chart.createdAt}
@@ -444,4 +473,21 @@ export function downloadMIRAGEGalleryJSON(data) {
   document.body.removeChild(link);
 
   URL.revokeObjectURL(url);
+}
+
+function getApect(chart) {
+  switch (chart.type) {
+    case "histogram":
+      return "2/1";
+    case "ranking":
+      return "2/1";
+    case "scatter":
+      return "square";
+    case "heatmap":
+      return "square";
+    case "contour":
+      return "square";
+    default:
+      return "2/1"; // Default aspect ratio
+  }
 }
