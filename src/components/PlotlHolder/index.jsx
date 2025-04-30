@@ -45,7 +45,6 @@ export default function PlotlHolder({
         filters,
         query,
       };
-      console.log(chartToSave);
       addChart(chartToSave);
 
       if (onSave && typeof onSave === "function") {

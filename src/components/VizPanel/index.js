@@ -31,6 +31,8 @@ import ScatterplotExt from "./ScatterplotExt";
 import Heatmap from "./Heatmap";
 import Contour from "./Contour";
 import TwoDPlot from "./TwoDPlot";
+import EventMap from "../EventMap";
+import MapWrapper from "./MapWrapper";
 
 const TOP = 10;
 function VizPanel({
@@ -216,6 +218,7 @@ function VizPanel({
           </div>
         ))}
       </div>
+      <Separator className="my-4" />
       <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 justify-center text-center">
         <TwoDPlot
           metricListOp={metricListOp}
@@ -224,6 +227,7 @@ function VizPanel({
           scatterdata={scatterdata}
           theme={theme}
         />
+        <MapWrapper />
       </div>
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Scatterwrapper

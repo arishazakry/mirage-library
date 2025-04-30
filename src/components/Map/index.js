@@ -20,7 +20,7 @@ const zoomi = scaleLinear()
     360.0,
   ])
   .range(d3range(0, 20).map((d) => 20 - d));
-export default function Map({ locs, height, width, highlight }) {
+export default function Map({ locs, height, width, highlight, config = {} }) {
   const theme = useTheme();
   let [data, setData] = useState([]);
   let [domain, setDomain] = useState({ center: { lon: 0, lat: 0 }, zoom: 1 });
@@ -173,6 +173,7 @@ export default function Map({ locs, height, width, highlight }) {
         showEditInChartStudio: true,
         plotlyServerURL: "https://chart-studio.plotly.com",
         "#Station": false,
+        ...config,
       }}
     />
   );

@@ -137,13 +137,13 @@ export default function Heatmap({
         onClick={(event) => {
           if (event.points && event.points.length > 0) {
             const point = event.points[0];
-            onSelect(data.data[point.pointIndex]);
+            onSelect(raw.data[point.pointIndex]);
           }
         }}
         onHover={(event) => {
           if (event.points && event.points.length > 0) {
             const pointIndex = event.points[0].pointIndex;
-            onHover(data.data[pointIndex]);
+            onHover(raw.data[pointIndex]);
           }
         }}
       />

@@ -41,6 +41,8 @@ import { ScrollArea } from "../ui/scroll-area";
 import ScatterplotExt from "../VizPanel/ScatterplotExt";
 import Heatmap from "../VizPanel/Heatmap";
 import Contour from "../VizPanel/Contour";
+import Map from "../Map";
+import AutoSizer from "react-virtualized-auto-sizer";
 
 export default function ChartGallery() {
   const {
@@ -185,12 +187,27 @@ export default function ChartGallery() {
             config={isStatis ? { staticPlot: true } : {}}
           />
         )}
+        {chart.type === "map" && (
+          <AutoSizer style={{ height: "100%", width: "100%" }}>
+            {({ height, width }) => {
+              return (
+                <Map
+                  height={height}
+                  width={width}
+                  locs={chart.data.locs}
+                  highlight={chart.data.highlight}
+                  config={isStatis ? { staticPlot: true } : {}}
+                />
+              );
+            }}
+          </AutoSizer>
+        )}
       </>
     ),
     [theme]
   );
   const exportData = useCallback(() => {
-    downloadMIRAGEGalleryJSON(charts);
+    downloadMIRAGEGalleryJSON({ charts, groups });
   }, [charts]);
   return (
     <div className="mx-auto p-4 space-y-6 flex flex-col min-h-dvh">
@@ -304,14 +321,14 @@ export default function ChartGallery() {
                 />
                 <ScrollArea className="h-full mb-4">
                   {/* 🖼️ Chart Gallery */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {filteredCharts.length === 0 ? (
                       <p className="text-gray-500">No matching charts.</p>
                     ) : (
                       filteredCharts.map((chart) => (
                         <Card
                           key={chart.id}
-                          className={`hover:shadow-lg transition-shadow relative aspect-[2/1]`}
+                          className={`aspect-square hover:shadow-lg transition-shadow`}
                         >
                           <CardHeader className="flex items-center justify-between">
                             {editingChartId === chart.id ? (
@@ -403,13 +420,8 @@ export default function ChartGallery() {
                             )}
                           </CardHeader>
                           <CardContent>
-                            {/* 📊 Chart Preview */}
-                            <div className="w-full gird grid-cols-1 ">
-                              <div
-                                className={`relative aspect-${getApect(chart)}`}
-                              >
-                                {renderChart(chart, true)}
-                              </div>
+                            <div className={`relative aspect-square h-full`}>
+                              {renderChart(chart, true)}
                             </div>
                             <p className="text-xs text-gray-500 mt-2">
                               Created: {chart.createdAt}
@@ -486,6 +498,8 @@ function getApect(chart) {
     case "heatmap":
       return "square";
     case "contour":
+      return "square";
+    case "map":
       return "square";
     default:
       return "2/1"; // Default aspect ratio

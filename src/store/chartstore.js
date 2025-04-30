@@ -96,6 +96,7 @@ export const useChartStore = create(
         }),
       addChartToGroup: (groupName, chartId) =>
         set((state) => {
+          debugger;
           if (!state.groups[groupName]) return state; // Group must exist
           if (state.groups[groupName].includes(chartId)) return state; // No duplicates
 
