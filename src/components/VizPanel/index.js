@@ -219,15 +219,18 @@ function VizPanel({
         ))}
       </div>
       <Separator className="my-4" />
-      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 justify-center text-center">
-        <TwoDPlot
-          metricListOp={metricListOp}
-          scatterMetrics={scatterMetrics}
-          onChangescatterMetrics={onChangescatterMetrics}
-          scatterdata={scatterdata}
-          theme={theme}
-        />
-        <MapWrapper />
+      <div className="flex flex-col items-center">
+        <h3 className="text-lg font-semibold text-primary">2D Plot</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 justify-center text-center w-full">
+          <TwoDPlot
+            metricListOp={metricListOp}
+            scatterMetrics={scatterMetrics}
+            onChangescatterMetrics={onChangescatterMetrics}
+            scatterdata={scatterdata}
+            theme={theme}
+          />
+          <MapWrapper />
+        </div>
       </div>
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Scatterwrapper

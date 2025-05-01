@@ -1,10 +1,23 @@
 import Map from "@/components/Map";
 import PlotlHolder from "@/components/PlotlHolder";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { selectFilters } from "@/store/reducer/streamfilters";
 import useStore from "@/store/strore";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
+
+const options = [
+  { key: "Bubble plot", value: "map" },
+  { key: "Density Heatmaps", value: "heatmap_map" },
+];
 
 export default function MapWrapper({}) {
   const {
@@ -24,6 +37,7 @@ export default function MapWrapper({}) {
     fetchEvents(filters, query);
   }, [fetchEvents, filters, query]);
   const [eventlocs, setEventlocs] = useState([]);
+  const [plotType, setplotType] = useState("map");
   useEffect(() => {
     try {
       const _locsMap = {};
@@ -43,21 +57,49 @@ export default function MapWrapper({}) {
     [eventlocs, currentDetail]
   );
   return (
-    <PlotlHolder title={"Map"} type="map" chartData={mapData}>
-      <div className="w-full aspect-square">
-        <AutoSizer style={{ height: "100%", width: "100%" }}>
-          {({ height, width }) => {
-            return (
-              <Map
-                height={height}
-                width={width}
-                locs={eventlocs}
-                highlight={currentDetail}
-              />
-            );
-          }}
-        </AutoSizer>
+    <div>
+      <div className="flex flex-col items-center  mb-2">
+        <div className="flex items-center gap-2 content-center">
+          <Label className="text-sm font-semibold break w-full">
+            Plot type:
+          </Label>
+
+          <Select
+            value={plotType}
+            onValueChange={(value) => setplotType(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Plot type" />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((m) => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.key}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-    </PlotlHolder>
+      <div className="grid grid-cols-1 justify-center text-center">
+        <PlotlHolder title={"Map"} type={plotType} chartData={mapData}>
+          <div className="w-full aspect-square">
+            <AutoSizer style={{ height: "100%", width: "100%" }}>
+              {({ height, width }) => {
+                return (
+                  <Map
+                    type={plotType}
+                    height={height}
+                    width={width}
+                    locs={eventlocs}
+                    highlight={currentDetail}
+                  />
+                );
+              }}
+            </AutoSizer>
+          </div>
+        </PlotlHolder>
+      </div>
+    </div>
   );
 }

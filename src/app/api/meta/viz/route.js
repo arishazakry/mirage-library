@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getQuery } from "../../search/route.js";
 import pgPool from "../../config/postgresql.js";
-import { metricList } from "@/lib/utils.js";
+import { metricList, metricRadarList } from "@/lib/utils.js";
 import { rangeFilterMap } from "../../filters/available/route.js";
 import { v4 as uuidv4 } from "uuid"; // Import UUID library
 import { getScatterData } from "./scatter/route.js";
+import { getRadarData } from "./radar/route.js";
 
 export const revalidate = 60;
 
@@ -32,7 +33,7 @@ export async function POST(req) {
         metrics =
           metrics?.filter((m) => validMetrics.has(m)) ||
           metricList.map((d) => d.key);
-
+        const radarMetric = metricRadarList.map((d) => d.key);
         const hisNum = 10;
         const values = [];
         let whereClause = "";
@@ -64,6 +65,9 @@ export async function POST(req) {
           metricsCombine[metric] = 1;
         });
         scatterMetrics.forEach((metric) => {
+          metricsCombine[metric] = 1;
+        });
+        radarMetric.forEach((metric) => {
           metricsCombine[metric] = 1;
         });
         await client.query(
@@ -172,7 +176,13 @@ export async function POST(req) {
             encoder
           );
         }
-
+        await getRadarData(
+          client,
+          tempTableName,
+          metricRadarList.map((d) => d.key),
+          controller,
+          encoder
+        );
         const timeTaken = Date.now() - startTime;
         controller.enqueue(
           encoder.encode(

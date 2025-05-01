@@ -187,11 +187,12 @@ export default function ChartGallery() {
             config={isStatis ? { staticPlot: true } : {}}
           />
         )}
-        {chart.type === "map" && (
+        {(chart.type === "map" || chart.type === "heatmap_map") && (
           <AutoSizer style={{ height: "100%", width: "100%" }}>
             {({ height, width }) => {
               return (
                 <Map
+                  type={chart.type}
                   height={height}
                   width={width}
                   locs={chart.data.locs}

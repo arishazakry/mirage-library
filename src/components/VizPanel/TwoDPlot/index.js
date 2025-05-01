@@ -11,6 +11,7 @@ import Contour from "../Contour";
 import { useEffect, useState } from "react";
 import ScatterplotExt from "../ScatterplotExt";
 import { metricList } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 const options = [
   { key: "Scatter plot", value: "scatter" },
@@ -44,55 +45,65 @@ export default function TwoDPlot({
   }, [scatterdata]);
   return (
     <div>
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center  mb-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-primary">2D Plot</h3>
-          <div className="flex gap-2">
-            <Select
-              value={plotType}
-              onValueChange={(value) => setplotType(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Plot type" />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.key}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={scatterMetrics[0]}
-              onValueChange={(value) => onChangescatterMetrics(value, 0)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="x" />
-              </SelectTrigger>
-              <SelectContent>
-                {metricListOp.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={scatterMetrics[1]}
-              onValueChange={(value) => onChangescatterMetrics(value, 1)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="y" />
-              </SelectTrigger>
-              <SelectContent>
-                {metricListOp.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex gap-4">
+            <div className="flex items-center gap-1">
+              <Label className="text-sm font-semibold break w-full">
+                Plot type:
+              </Label>
+              <Select
+                value={plotType}
+                onValueChange={(value) => setplotType(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Plot type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {options.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.key}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-1">
+              <Label className="text-sm font-semibold break w-full">x:</Label>
+              <Select
+                value={scatterMetrics[0]}
+                onValueChange={(value) => onChangescatterMetrics(value, 0)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="x" />
+                </SelectTrigger>
+                <SelectContent>
+                  {metricListOp.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-1">
+              <Label className="text-sm font-semibold break w-full">y:</Label>
+              <Select
+                value={scatterMetrics[1]}
+                onValueChange={(value) => onChangescatterMetrics(value, 1)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="y" />
+                </SelectTrigger>
+                <SelectContent>
+                  {metricListOp.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </div>
@@ -107,6 +118,7 @@ export default function TwoDPlot({
                 <PlotlHolder
                   title={`${titles[index]?.x} vs ${titles[index]?.y}`}
                   type="scatter"
+                  className=" aspect-square"
                 >
                   <ScatterplotExt
                     data={data}

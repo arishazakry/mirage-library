@@ -20,7 +20,14 @@ const zoomi = scaleLinear()
     360.0,
   ])
   .range(d3range(0, 20).map((d) => 20 - d));
-export default function Map({ locs, height, width, highlight, config = {} }) {
+export default function Map({
+  type,
+  locs,
+  height,
+  width,
+  highlight,
+  config = {},
+}) {
   const theme = useTheme();
   let [data, setData] = useState([]);
   let [domain, setDomain] = useState({ center: { lon: 0, lat: 0 }, zoom: 1 });
@@ -33,12 +40,14 @@ export default function Map({ locs, height, width, highlight, config = {} }) {
         countriesScale.domain(extent(locs, (d) => d?.count));
         let lon = [];
         let lat = [];
+        let z = [];
         let size = [];
         let text = [];
         // let color=[];
         locs.forEach((d) => {
           lon.push(d.long);
           lat.push(d.lat);
+          z.push(d?.count);
           size.push(countriesScale(d?.count));
           text.push(`${d["title"]} (${d?.count})`);
           // color.push((highlight&&(highlight.Location_RG_country===d['title']))? 'red':_botColor);
@@ -47,8 +56,8 @@ export default function Map({ locs, height, width, highlight, config = {} }) {
         let ticks = countriesScale.ticks(2);
         let tsize = ticks.map((t) => countriesScale(t));
         let tickS = ticks.map((t, i) => ({
-          mapbox: "mapboxTick",
-          type: "scattermapbox",
+          map: "mapTick",
+          type: "scattermap",
           name: `${t}`,
           lon: [0],
           lat: [0],
@@ -60,26 +69,6 @@ export default function Map({ locs, height, width, highlight, config = {} }) {
           },
           visible: "legendonly",
         }));
-        let data = [
-          {
-            type: "scattermapbox",
-            lon,
-            lat,
-            hoverinfo: "text",
-            text,
-            showlegend: false,
-            marker: {
-              size,
-              color: _botColor,
-
-              line: {
-                color: "black",
-              },
-            },
-            name: "stream",
-          },
-          ...tickS,
-        ];
         const longd = extent(locs, (d) => d?.long); // [-180,180]
         const latd = extent(locs, (d) => d?.lat); // [-90,90]
         const center = {
@@ -94,36 +83,82 @@ export default function Map({ locs, height, width, highlight, config = {} }) {
             zoomi((latd[1] - latd[0]) * magrin)
           ) / 1.5
         );
-
-        setDomain({ zoom, center });
-        if (highlight) {
-          const _highlight = locs.find(
-            (d) => d["location_rg_id"] === highlight.location_rg_id
-          );
-          if (_highlight) {
-            data.push({
-              type: "scattermapbox",
-              // locationmode: 'world',
-              lon: [_highlight.long],
-              lat: [_highlight.lat],
+        if (type !== "heatmap_map") {
+          let data = [
+            {
+              type: "scattermap",
+              lon,
+              lat,
               hoverinfo: "text",
-              text: [`${_highlight["title"]} (${_highlight?.count})`],
-              showlegend: true,
+              text,
+              showlegend: false,
               marker: {
-                size: [countriesScale(_highlight.count)],
-                color: "red",
+                size,
+                color: _botColor,
+
                 line: {
                   color: "black",
                 },
               },
-              name: _highlight["title"],
-            });
+              name: "stream",
+            },
+            ...tickS,
+          ];
+
+          if (highlight) {
+            const _highlight = locs.find(
+              (d) => d["location_rg_id"] === highlight.location_rg_id
+            );
+            if (_highlight) {
+              data.push({
+                type: "scattermap",
+                // locationmode: 'world',
+                lon: [_highlight.long],
+                lat: [_highlight.lat],
+                hoverinfo: "text",
+                text: [`${_highlight["title"]} (${_highlight?.count})`],
+                showlegend: true,
+                // subplot: "map",
+                marker: {
+                  size: [countriesScale(_highlight.count)],
+                  color: "red",
+                  line: {
+                    color: "black",
+                  },
+                },
+                name: _highlight["title"],
+              });
+            }
           }
+          setData(data);
+          setDomain({ zoom, center });
+        } else {
+          let data = [
+            {
+              type: "densitymap",
+              lon,
+              lat,
+              z,
+              hoverinfo: "text",
+              text,
+              showlegend: false,
+              coloraxis: "coloraxis",
+              radius: 20,
+              name: "heat",
+              colorbar: {
+                thickness: 5,
+                len: 1,
+                xpad: 2,
+                title: "Count",
+              },
+            },
+          ];
+          setData(data);
+          setDomain({ zoom, center });
         }
-        setData(data);
       } else setData([]);
     } catch (e) {}
-  }, [locs, highlight]);
+  }, [type, locs, highlight]);
   // console.log(domain.center,domain.zoom)
   let layout = useMemo(
     () => ({
@@ -133,10 +168,10 @@ export default function Map({ locs, height, width, highlight, config = {} }) {
       height: height,
       width: width,
       margin: { t: 10, r: 10, l: 10, b: 10 },
-      mapboxTick: {
+      mapTick: {
         style: "whitebg",
       },
-      mapbox: {
+      map: {
         style: "carto-positron",
         center: domain.center,
         zoom: domain.zoom,
@@ -154,9 +189,17 @@ export default function Map({ locs, height, width, highlight, config = {} }) {
         y: 0,
         orientation: "h",
       },
+      coloraxis: { colorscale: "Viridis" },
+      style: "outdoors",
     }),
     [height, width, theme, domain]
   );
+  const [hasMounted, setHasMounted] = useState(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted) return null; // avoid mismatch
   return (
     <Plot
       data={data}
