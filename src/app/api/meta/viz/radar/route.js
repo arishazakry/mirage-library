@@ -58,22 +58,16 @@ export async function POST(req) {
         await client.query(`ANALYZE ${tempTableName}`);
 
         // get the min max median of the metrics here
-        await client.query(
-          `SELECT ${metrics
-            .map(
-              (metric) =>
-                `MIN(${metric}) AS ${metric}_min, MAX(${metric}) AS ${metric}_max, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${metric}) AS ${metric}_median`
-            )
-            .join(", ")}
-           FROM ${tempTableName};`
-        );
-        await getScatterData(
-          client,
-          tempTableName,
-          metrics,
-          controller,
-          encoder
-        );
+        // await client.query(
+        //   `SELECT ${metrics
+        //     .map(
+        //       (metric) =>
+        //         `MIN(${metric}) AS ${metric}_min, MAX(${metric}) AS ${metric}_max, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${metric}) AS ${metric}_median`
+        //     )
+        //     .join(", ")}
+        //    FROM ${tempTableName};`
+        // );
+        await getRadarData(client, tempTableName, metrics, controller, encoder);
 
         const timeTaken = Date.now() - startTime;
         controller.enqueue(
@@ -120,7 +114,13 @@ export async function getRadarData(
       `SELECT ${metrics
         .map(
           (metric) =>
-            `MIN(${metric}) AS ${metric}_min, MAX(${metric}) AS ${metric}_max, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${metric}) AS ${metric}_median`
+            // `MIN(${metric}) AS ${metric}_min, MAX(${metric}) AS ${metric}_max, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${metric}) AS ${metric}_median`
+            `PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY ${metric}) AS ${metric}_min, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY ${metric}) AS ${metric}_max, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${metric}) AS ${metric}_median`
+          //     `AVG(${metric}) AS ${metric}_median,
+          // STDDEV_SAMP(${metric}) AS ${metric}_stddev,
+          // COUNT(${metric}) AS ${metric}_n,
+          // AVG(${metric}) - 1.645 * (STDDEV_SAMP(${metric}) / SQRT(COUNT(${metric}))) AS ${metric}_min,
+          // AVG(${metric}) + 1.645 * (STDDEV_SAMP(${metric}) / SQRT(COUNT(${metric}))) AS ${metric}_max`
         )
         .join(", ")}
        FROM ${tempTableName};`

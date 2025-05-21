@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useState, useMemo } from "react";
 import { scaleOrdinal, maxIndex, rollup, color } from "d3";
 import { isArray } from "lodash";
 import Barchart from "./Barchart";
-import { metricList, rankMetricList } from "@/lib/utils";
+import { metricList, metricRadarList, rankMetricList } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -33,6 +33,9 @@ import Contour from "./Contour";
 import TwoDPlot from "./TwoDPlot";
 import EventMap from "../EventMap";
 import MapWrapper from "./MapWrapper";
+import RadarChart from "../RadarChart";
+import AutoSizer from "react-virtualized-auto-sizer";
+import GraphClient from "./Network";
 
 const TOP = 10;
 function VizPanel({
@@ -48,6 +51,8 @@ function VizPanel({
   const [histindata, sethisindata] = useState([]);
   const [rankdata, setrankdata] = useState([]);
   const [scatterdata, setscatterdata] = useState([]);
+  const [radardata, setradardata] = useState({});
+  const [network, setNetwork] = useState({});
   const [colorKey, setColorKey] = useState(rankMetricList[0].key);
   const [hovered, sethovered] = useState(null);
   const { resolvedTheme } = useTheme();
@@ -99,6 +104,37 @@ function VizPanel({
       ]);
     }
   }, [data?.scatter, scatterMetrics]);
+  useEffect(() => {
+    const radard = data?.radar;
+    if (radard && Object.keys(radard).length) {
+      const radar = Object.values(radard)[0]?.data?.[0] ?? {};
+      const metric = metricRadarList;
+      const lowerBound = [],
+        upperBound = [],
+        mean = {};
+      metric.forEach((d) => {
+        lowerBound.push(+radar[`${d.key}_min`] ?? undefined);
+        upperBound.push(+radar[`${d.key}_max`] ?? undefined);
+        mean[d.key] = radar[`${d.key}_median`];
+      });
+      setradardata({
+        key: Object.values(radard)[0]?.metric.join(","),
+        label: "Radar chart",
+        data: { metricInfo: metric, mean, band: { lowerBound, upperBound } },
+      });
+    }
+  }, [data?.radar]);
+  useEffect(() => {
+    const network = data?.network;
+    if (network && Object.keys(network).length) {
+      const network_data = Object.values(network)[0]?.data ?? {};
+      setNetwork({
+        key: "artist,genere",
+        label: "Artist Network by Genere",
+        data: network_data,
+      });
+    }
+  }, [data?.network]);
   const onHover = useCallback((data) => {
     sethovered(data);
   }, []);
@@ -230,6 +266,47 @@ function VizPanel({
             theme={theme}
           />
           <MapWrapper />
+        </div>
+      </div>
+      <Separator className="my-4" />
+      <div className="flex flex-col items-center">
+        <h3 className="text-lg font-semibold text-primary">nD Plot</h3>
+        <div className="text-center w-max-300 w-full">
+          <PlotlHolder
+            title={"Radar chart"}
+            type="histogram"
+            chartData={radardata}
+          >
+            <AutoSizer style={{ height: 300, width: "100%" }}>
+              {({ height, width }) => {
+                return (
+                  <RadarChart
+                    meanradar={radardata.data?.mean}
+                    axisInfo={radardata.data?.metricInfo}
+                    bandradar={radardata.data?.band}
+                    height={height - 40}
+                    width={width}
+                  />
+                );
+              }}
+            </AutoSizer>
+          </PlotlHolder>
+        </div>
+      </div>
+      <div className="flex flex-col items-center">
+        <h3 className="text-lg font-semibold text-primary">nD Plot</h3>
+        <div className="text-center w-max-300 w-full">
+          <PlotlHolder
+            title={network?.label}
+            type="network"
+            chartData={network?.data}
+          >
+            <AutoSizer style={{ height: 300, width: "100%" }}>
+              {({ height, width }) => {
+                return <GraphClient data={network?.data} threshold={1} />;
+              }}
+            </AutoSizer>
+          </PlotlHolder>
         </div>
       </div>
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

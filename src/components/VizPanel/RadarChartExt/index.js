@@ -5,68 +5,35 @@ import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
-const emptyArray = [];
+
 export default function RadarChart({
   inputData,
-  axisInfo = emptyArray,
+  axisInfo,
   height,
   width,
   highlight,
   meanradar,
-  bandradar,
 }) {
   const theme = useTheme();
   let [data, setData] = useState([]);
   useEffect(() => {
-    if (axisInfo.length) {
-      const data =
-        inputData && inputData.length
-          ? inputData.map((d) => {
-              const item = {
-                type: "scatterpolar",
-                r: [],
-                theta: [],
-                fill: "toself",
-                name: "current event",
-              };
-              axisInfo.forEach((k, ki) => {
-                item.r[ki] = d[k.key] ?? undefined;
-                item.theta[ki] = k.label;
-              });
-              item.r.push(item.r[0]);
-              item.theta.push(item.theta[0]);
-              return item;
-            })
-          : [];
-      if (bandradar) {
-        const { lowerBound, upperBound } = bandradar;
-        const lower = [...lowerBound, lowerBound[0]];
-        const upper = [...upperBound, upperBound[0]];
-        const theta = [];
+    if (axisInfo.length && inputData.length) {
+      const data = inputData.map((d) => {
+        const item = {
+          type: "scatterpolar",
+          r: [],
+          theta: [],
+          fill: "toself",
+          name: "current event",
+        };
         axisInfo.forEach((k, ki) => {
-          theta[ki] = k.label;
+          item.r[ki] = d[k.key] ?? undefined;
+          item.theta[ki] = k.label;
         });
-        theta.push(theta[0]);
-        const lowerTrace = {
-          type: "scatterpolar",
-          r: lower,
-          theta,
-          fill: "none",
-          line: { color: "transparent" },
-          showlegend: false,
-        };
-
-        const upperTrace = {
-          type: "scatterpolar",
-          r: upper,
-          theta,
-          fill: "tonext", // Fill to the previous trace
-          name: "Score Band",
-          fillcolor: "rgba(0, 100, 200, 0.2)",
-          line: { color: "blue" },
-        };
-        data.push(lowerTrace, upperTrace);
-      }
+        item.r.push(item.r[0]);
+        item.theta.push(item.theta[0]);
+        return item;
+      });
       if (meanradar) {
         const item = {
           type: "scatterpolar",
@@ -90,7 +57,6 @@ export default function RadarChart({
       setData([]);
     }
   }, [inputData, meanradar, axisInfo]);
-  console.log(data);
   let layout = useMemo(
     () => ({
       paper_bgcolor: "rgba(255,255,255,0)",

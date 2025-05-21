@@ -6,6 +6,7 @@ import { rangeFilterMap } from "../../filters/available/route.js";
 import { v4 as uuidv4 } from "uuid"; // Import UUID library
 import { getScatterData } from "./scatter/route.js";
 import { getRadarData } from "./radar/route.js";
+import { getArtistNetwork } from "./network_artist/route.js";
 
 export const revalidate = 60;
 
@@ -27,12 +28,14 @@ export async function POST(req) {
           sortOrder = "ASC",
           metrics,
           scatterMetrics = ["track_sp_energy", "track_sp_liveness"],
+          graphThreshold,
         } = body;
 
         const validMetrics = new Set(metricList.map((d) => d.key));
         metrics =
           metrics?.filter((m) => validMetrics.has(m)) ||
           metricList.map((d) => d.key);
+        graphThreshold = graphThreshold ?? 1;
         const radarMetric = metricRadarList.map((d) => d.key);
         const hisNum = 10;
         const values = [];
@@ -74,7 +77,8 @@ export async function POST(req) {
           `CREATE TEMP TABLE ${tempTableName} AS
           SELECT event_ma_id, artist_sp_genre, artist_wd_country, track_sp_key, ${Object.keys(
             metricsCombine
-          ).join(", ")}
+          ).join(", ")},
+          artist_sp_id, artist_sp_name
           FROM event_flat ${whereClause};`,
           values
         );
@@ -180,6 +184,13 @@ export async function POST(req) {
           client,
           tempTableName,
           metricRadarList.map((d) => d.key),
+          controller,
+          encoder
+        );
+        await getArtistNetwork(
+          client,
+          tempTableName,
+          graphThreshold,
           controller,
           encoder
         );

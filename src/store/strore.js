@@ -191,6 +191,8 @@ const useStore = create((set, get) => {
 
         const histograms = {};
         const scatters = {};
+        const radar = {};
+        const network = {};
 
         while (true) {
           const { done, value } = await reader.read();
@@ -237,6 +239,22 @@ const useStore = create((set, get) => {
                 vizdata: {
                   ...prev.vizdata,
                   scatter: { ...scatters },
+                },
+              }));
+            } else if (event === "radar") {
+              radar[data.metric] = data;
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  radar: { ...radar },
+                },
+              }));
+            } else if (event === "network_artist") {
+              network[data.metric] = data;
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  network: { ...network },
                 },
               }));
             } else if (event === "done") {
@@ -427,6 +445,92 @@ const useStore = create((set, get) => {
       } catch (error) {
         if (error.name !== "AbortError") {
           console.error("Histogram stream error:", error);
+          set({ error: error.message });
+        }
+      }
+    },
+    updateVizRadar: async (ids, filters, query, metrics) => {
+      const { vizdata } = get();
+      // Determine which metrics are already available
+      const existingMetrics = new Set(Object.keys(vizdata.radar || {}));
+      const missingMetrics = !existingMetrics.has(metrics.join(","))
+        ? metrics
+        : [];
+      if (missingMetrics.length === 0) return; // All metrics already available
+
+      // Cancel any previous histogram update stream
+      const prev = get().currentControllerVizdata;
+      if (prev) prev.abort();
+
+      const controller = new AbortController();
+      set({ currentControllerVizdata: controller });
+
+      try {
+        if (metrics.length !== 2) return;
+        const response = await fetch(`${APIUrl}/meta/viz/radar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ids,
+            filters,
+            query,
+            metrics: missingMetrics,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.body) throw new Error("No response body from stream");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const newHistograms = {};
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop(); // Save the partial for next loop
+
+          for (const part of parts) {
+            const lines = part.trim().split("\n");
+            const event = lines
+              .find((l) => l.startsWith("event:"))
+              ?.slice(7)
+              .trim();
+            const dataLine = lines
+              .find((l) => l.startsWith("data:"))
+              ?.slice(6)
+              .trim();
+
+            if (!event || !dataLine) continue;
+
+            const data = JSON.parse(dataLine);
+
+            if (event === "radar") {
+              newHistograms[data.metric] = data;
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  radar: {
+                    ...prev.vizdata.radar,
+                    [data.metric]: data,
+                  },
+                },
+              }));
+            } else if (event === "error") {
+              console.error("Stream error:", data.error);
+              set({ error: data.error });
+            }
+          }
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("Radar stream error:", error);
           set({ error: error.message });
         }
       }
