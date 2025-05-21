@@ -90,7 +90,6 @@ export default function RadarChart({
       setData([]);
     }
   }, [inputData, meanradar, axisInfo]);
-  console.log(data);
   let layout = useMemo(
     () => ({
       paper_bgcolor: "rgba(255,255,255,0)",

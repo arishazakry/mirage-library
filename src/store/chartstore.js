@@ -15,7 +15,13 @@ export const useChartStore = create(
       chartIds: new Set(), // Used for fast lookups (not persisted directly)
       comparisonCharts: [],
       groups: {}, // Store groups { groupName: [chartId1, chartId2] }
-
+      resetChartStore: () =>
+        set({
+          charts: [],
+          chartIds: new Set(),
+          comparisonCharts: [],
+          groups: {},
+        }),
       // ✅ Add Chart (Prevent Duplicates)
       addChart: (chartData) =>
         set((state) => {
@@ -81,9 +87,9 @@ export const useChartStore = create(
       clearComparison: () => set({ comparisonCharts: [] }),
 
       // ✅ Group Charts
-      createGroup: (groupName) =>
+      createGroup: (groupName, inintIds = []) =>
         set((state) => ({
-          groups: { ...state.groups, [groupName]: [] },
+          groups: { ...state.groups, [groupName]: inintIds },
         })),
       renameGroup: (oldName, newgroupName) =>
         set((state) => {

@@ -36,6 +36,7 @@ import MapWrapper from "./MapWrapper";
 import RadarChart from "../RadarChart";
 import AutoSizer from "react-virtualized-auto-sizer";
 import GraphClient from "./Network";
+import ParallelCoordinatesPlot from "../ParallelCoordinatesPlot";
 
 const TOP = 10;
 function VizPanel({
@@ -272,15 +273,32 @@ function VizPanel({
       <div className="flex flex-col items-center">
         <h3 className="text-lg font-semibold text-primary">nD Plot</h3>
         <div className="text-center w-max-300 w-full">
+          <PlotlHolder title={"Radar chart"} type="radar" chartData={radardata}>
+            <AutoSizer style={{ height: 300, width: "100%" }}>
+              {({ height, width }) => {
+                return (
+                  <RadarChart
+                    meanradar={radardata.data?.mean}
+                    axisInfo={radardata.data?.metricInfo}
+                    bandradar={radardata.data?.band}
+                    height={height - 40}
+                    width={width}
+                  />
+                );
+              }}
+            </AutoSizer>
+          </PlotlHolder>
+        </div>
+        <div className="text-center w-max-300 w-full">
           <PlotlHolder
-            title={"Radar chart"}
-            type="histogram"
+            title={"Parallel Coordinates"}
+            type="parallelCoordinatesPlot"
             chartData={radardata}
           >
             <AutoSizer style={{ height: 300, width: "100%" }}>
               {({ height, width }) => {
                 return (
-                  <RadarChart
+                  <ParallelCoordinatesPlot
                     meanradar={radardata.data?.mean}
                     axisInfo={radardata.data?.metricInfo}
                     bandradar={radardata.data?.band}

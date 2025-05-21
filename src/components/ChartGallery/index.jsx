@@ -27,6 +27,8 @@ import {
   GitCompare,
   Download,
   ScatterChart,
+  Import,
+  HardDriveUpload,
 } from "lucide-react";
 import {
   ResizableHandle,
@@ -43,10 +45,12 @@ import Heatmap from "../VizPanel/Heatmap";
 import Contour from "../VizPanel/Contour";
 import Map from "../Map";
 import AutoSizer from "react-virtualized-auto-sizer";
+import UploadButton from "../UploadButton";
 
 export default function ChartGallery() {
   const {
     charts,
+    addChart,
     removeChart,
     renameChart,
     groups,
@@ -58,6 +62,7 @@ export default function ChartGallery() {
     removeChartFromGroup,
     renameGroup,
     deleteGroup,
+    resetChartStore,
   } = useChartStore();
 
   const { resolvedTheme } = useTheme();
@@ -210,11 +215,28 @@ export default function ChartGallery() {
   const exportData = useCallback(() => {
     downloadMIRAGEGalleryJSON({ charts, groups });
   }, [charts]);
+  const importData = useCallback(async (file) => {
+    const text = await file.text(); // ← Read as text
+    const json = JSON.parse(text); // ← Parse to JS object
+    const { charts = [], groups = {} } = json;
+    resetChartStore();
+    // Import charts
+    for (const chart of charts) {
+      const id = chart.id ?? generateChartId(chart);
+      addChart({ ...chart, id });
+    }
+    // Import charts
+    Object.entries(groups).forEach(([groupName, chartIds]) => {
+      createGroup(groupName, chartIds);
+    });
+  }, []);
+
   return (
     <div className="mx-auto p-4 space-y-6 flex flex-col min-h-dvh">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold mb-6">Interactive Chart Gallery</h1>
         <div>
+          <UploadButton onUpload={importData} />
           <Button variant="outline" className="mr-2" onClick={exportData}>
             <Download /> Export
           </Button>

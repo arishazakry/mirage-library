@@ -27,7 +27,7 @@ export async function POST(req) {
           sortBy,
           sortOrder = "ASC",
           metrics,
-          scatterMetrics = ["track_sp_energy", "track_sp_liveness"],
+          scatterMetrics = ["track_sp_valence", "track_sp_acousticness"],
           graphThreshold,
         } = body;
 

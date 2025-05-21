@@ -34,7 +34,7 @@ const useStore = create((set, get) => {
     locationData: [],
     countries: [],
     histMetrics: ["track_sp_year"],
-    scatterMetrics: ["track_sp_energy", "track_sp_liveness"],
+    scatterMetrics: ["track_sp_valence", "track_sp_acousticness"],
     fields: { value: { stationData: [], locationData: [] } },
     event_export_list: { value: {} },
     vizdata: {},
