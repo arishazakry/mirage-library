@@ -181,7 +181,7 @@ const Earth3D = forwardRef(
 
     useEffect(() => {
       onSelectLegend("selectCountry", (d) => {
-        onSelect({ location_rg_country: [d["title"]] });
+        onSelect({ location_ne_country: {value:[d["title"]]} });
         zoomTo(d.long, d.lat);
       });
     }, [zoomTo, onSelect]);
@@ -291,8 +291,8 @@ const Earth3D = forwardRef(
                 location_rg_city.push(d.location_rg_city);
               });
               onSelect({
-                location_rg_city,
-                location_rg_country: [d.points[0]?.location_rg_country],
+                location_rg_city:{value:location_rg_city},
+                location_ne_country: {value:[d.points[0]?.location_rg_country]},
               });
             }}
             onGlobeClick={stopPlay}
