@@ -35,10 +35,16 @@ import EventMap from "../EventMap";
 import MapWrapper from "./MapWrapper";
 import RadarChart from "../RadarChart";
 import AutoSizer from "react-virtualized-auto-sizer";
-import GraphClient from "./Network";
+// import GraphClient from "./Network";
+import dynamic from "next/dynamic";
 import ParallelCoordinatesPlot from "../ParallelCoordinatesPlot";
 
 const TOP = 10;
+const GraphClient = dynamic(() => import("@/components/VizPanel/Network"), {
+  ssr: false,
+});
+
+
 function VizPanel({
   data,
   source,

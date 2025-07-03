@@ -12,6 +12,7 @@ import { Crown, Share, Sparkle } from "lucide-react";
 import { useSelector } from "react-redux";
 import useStore from "@/store/strore";
 import { selectFilters } from "@/store/reducer/streamfilters";
+import { ExportProgress } from "../ExportProgress";
 
 const ExportButton = () => {
   const {
@@ -64,6 +65,7 @@ const ExportButton = () => {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ExportProgress isLoading={loading}/>
     </div>
   );
 };

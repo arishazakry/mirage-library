@@ -11,6 +11,8 @@ import {
   AArrowUp,
   ALargeSmall,
   GalleryThumbnails,
+  HeadphoneOff,
+  Headphones,
   Languages,
   LayoutDashboard,
   Moon,
@@ -37,10 +39,12 @@ import {
 import "./index.css";
 import ShareButton from "../ShareButton";
 import ExportButton from "../ExportButton";
+import FloatingMusicWidgetWrapper from "../FloatingMusicWidget/wrapper";
 
 export default function HomePage() {
   const t = useTranslations("HomePage");
   const { setTheme, theme } = useTheme();
+  const [isWidgetVisible, setIsWidgetVisible] = useState(true);
   const [layoutItems, setLayoutItems] = useState({
     earth: { key: "Earth View", val: true, disable: true },
     eventList: { key: "Event List", val: true },
@@ -71,6 +75,13 @@ export default function HomePage() {
               }
             >
               {theme === "dark" ? <Moon /> : <Sun />}
+            </Toggle>
+            <Toggle
+              onClick={() =>
+                isWidgetVisible ? setIsWidgetVisible(false) : setIsWidgetVisible(true)
+              }
+            >
+              {isWidgetVisible ? <HeadphoneOff /> : <Headphones />}
             </Toggle>
             <Link href="/gallery" className="text-sm" target="_blank">
               <Button variant="ghost" size="icon">
@@ -133,6 +144,9 @@ export default function HomePage() {
         </div>
         <div className="flex-grow w-full">
           <DynamicLayout />
+           <FloatingMusicWidgetWrapper 
+        setIsWidgetVisible={setIsWidgetVisible}
+        isVisible={isWidgetVisible}/>
         </div>
       </div>
     </ReduxProvider>
