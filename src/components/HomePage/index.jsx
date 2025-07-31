@@ -39,7 +39,11 @@ import {
 import "./index.css";
 import ShareButton from "../ShareButton";
 import ExportButton from "../ExportButton";
-import FloatingMusicWidgetWrapper from "../FloatingMusicWidget/wrapper";
+import dynamic from "next/dynamic";
+const FloatingMusicWidgetWrapper = dynamic(
+  () => import("../FloatingMusicWidget/wrapper"),
+  { ssr: false }
+);
 
 export default function HomePage() {
   const t = useTranslations("HomePage");

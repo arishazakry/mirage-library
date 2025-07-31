@@ -35,6 +35,7 @@ const useStore = create((set, get) => {
     countries: [],
     histMetrics: ["track_sp_year"],
     scatterMetrics: ["track_sp_valence", "track_sp_energy"],
+    netMetrics:{},
     fields: { value: { stationData: [], locationData: [] } },
     event_export_list: { value: {} },
     vizdata: {},
@@ -54,6 +55,9 @@ const useStore = create((set, get) => {
     },
     setscatterMetrics: (metrics) => {
       set({ scatterMetrics: metrics });
+    },
+    setnettMetrics: (metrics) => {
+      set({ netMetrics: metrics });
     },
     setError: (path, error) =>
       set((state) => ({
@@ -249,12 +253,12 @@ const useStore = create((set, get) => {
                   radar: { ...radar },
                 },
               }));
-            } else if (event === "network_artist") {
-              network[data.metric] = data;
+            } else if (event === "network") {
+              // network[data.metric] = data;
               set((prev) => ({
                 vizdata: {
                   ...prev.vizdata,
-                  network: { ...network },
+                  network: { ...data },
                 },
               }));
             } else if (event === "done") {
@@ -434,6 +438,86 @@ const useStore = create((set, get) => {
                     ...prev.vizdata.scatter,
                     [data.metric]: data,
                   },
+                },
+              }));
+            } else if (event === "error") {
+              console.error("Stream error:", data.error);
+              set({ error: data.error });
+            }
+          }
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("Histogram stream error:", error);
+          set({ error: error.message });
+        }
+      }
+    },
+    updateVizNet: async (ids, filters, query, metrics) => {
+      const { vizdata } = get();
+      // Determine which metrics are already available
+      // const existingMetrics = {...(vizdata.network || {})};
+      // Object.keys(metrics).forEach(dk=>existingMetrics[dk] = metrics[dk])
+
+      // Cancel any previous histogram update stream
+      const prev = get().currentControllerVizdata;
+      if (prev) prev.abort();
+
+      const controller = new AbortController();
+      set({ currentControllerVizdata: controller });
+
+      try {
+        const response = await fetch(`${APIUrl}/meta/viz/network`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ids,
+            filters,
+            query,
+            metadataVariable:metrics?.metadataVariable?? "artists", // artists, genres, timbres
+            maxNodes:metrics?.maxNodes?? 100,
+            communityDetection: metrics?.communityDetection??false,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.body) throw new Error("No response body from stream");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        debugger
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop(); // Save the partial for next loop
+
+          for (const part of parts) {
+            const lines = part.trim().split("\n");
+            const event = lines
+              .find((l) => l.startsWith("event:"))
+              ?.slice(7)
+              .trim();
+            const dataLine = lines
+              .find((l) => l.startsWith("data:"))
+              ?.slice(6)
+              .trim();
+
+            if (!event || !dataLine) continue;
+
+            const data = JSON.parse(dataLine);
+
+            if (event === "network") {
+  
+              set((prev) => ({
+                vizdata: {
+                  ...prev.vizdata,
+                  network: data,
                 },
               }));
             } else if (event === "error") {

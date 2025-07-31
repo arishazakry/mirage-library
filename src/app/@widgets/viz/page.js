@@ -13,11 +13,13 @@ export default function VizPanelWraper() {
     sethistMetrics,
     scatterMetrics,
     setscatterMetrics,
+    setnettMetrics,
     requestDetail,
     requestVizdata,
     // requestAvgData,
     updateVizHistograms,
     updateVizScatter,
+    updateVizNet,
     query,
     loading: { events: loadingEvents },
   } = useStore();
@@ -51,6 +53,14 @@ export default function VizPanelWraper() {
     },
     [vizsource, eventSelectedData, query, filters, updateVizScatter]
   );
+    const handleChangeMetricNetwork = useCallback(
+    (opts) => {
+      debugger
+      const ids = vizsource ? undefined : eventSelectedData.map((d) => d._id);
+      updateVizNet(ids, filters, query, opts);
+    },
+    [vizsource, eventSelectedData, query, filters, updateVizNet]
+  );
   return (
     <VizPanel
       ountries={countries}
@@ -70,6 +80,10 @@ export default function VizPanelWraper() {
         newkeys[index] = key;
         setscatterMetrics(newkeys);
         handleChangeMetricScatter(newkeys);
+      }}
+      onChangeNetwork={(opt) => {
+        setnettMetrics(opt);
+        handleChangeMetricNetwork(opt);
       }}
       onSelect={onSelectStream}
     />

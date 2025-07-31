@@ -294,7 +294,7 @@ const AdvancedFilter = () => {
 
   // Use debounce for search query with 800ms delay
   const debouncedSearchQuery = useDebounce(searchQuery, 800);
-  const debouncedSearchQueryCat = useDebounce(searchQueryCat, 800);
+  // const debouncedSearchQueryCat = useDebounce(searchQueryCat, 800);
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -324,7 +324,7 @@ const AdvancedFilter = () => {
     if (debouncedSearchQuery !== query?.value || wasCleared) {
       handleSearch();
     }
-  }, [debouncedSearchQuery, debouncedSearchQueryCat]);
+  }, [debouncedSearchQuery, searchQueryCat]);
 
   const handleFilterChange = (field, value) => {
     dispatch(setFilter({ key: field, value }));
@@ -351,9 +351,11 @@ const AdvancedFilter = () => {
     setTimeout(handleSearch, 0);
   };
 
-  const handleSearch = useCallback(() => {
+  const handleSearch = useCallback((input) => {
     // Update query in store (including when empty)
-    setQuery({ key: searchQueryCat, value: searchQuery });
+    const c = input?.searchQueryCat??searchQueryCat;
+    const q = input?.searchQuery??searchQuery;
+    setQuery({ key: c, value: q });
 
     // Trigger search with current filters and query
     // if (typeof search === "function") {
@@ -465,8 +467,9 @@ const AdvancedFilter = () => {
             value={searchQueryCat}
             onValueChange={(value) => {
               setSearchQueryCat(value);
+              handleSearch({searchQueryCat:value});
               // Trigger search when category changes
-              setTimeout(handleSearch, 0);
+              // setTimeout(handleSearch, 0);
             }}
           >
             <SelectTrigger className="absolute right-0 top-0 w-[100px]">

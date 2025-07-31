@@ -67,19 +67,113 @@ export async function POST(req) {
     if (client) client.release();
   }
 }
+// export function getQuery(sortBy, sortOrder, filters, query) {
+//   const allowedSortColumns = new Set([
+//     "event_ma_id",
+//     "track_sp_name",
+//     "event_se_description",
+//     "location_rg_city",
+//     "location_rg_country",
+//     "station_rg_genre",
+//     "station_rg_name",
+//     "artist_sp_name",
+//   ]);
+
+//   // Default sorting
+//   let orderClause = "ORDER BY event_ma_id ASC";
+//   if (sortBy && allowedSortColumns.has(sortBy)) {
+//     const order = sortOrder.toUpperCase() === "DESC" ? "DESC" : "ASC";
+//     orderClause = `ORDER BY ${sortBy} ${order}`;
+//   }
+
+//   let whereClauses = [];
+//   let values = [];
+//   let valueIndex = 1;
+//   if (filters && Object.keys(filters).length > 0) {
+//     for (const [key, filter] of Object.entries(filters)) {
+//       if (filter && typeof filter === "object" && "value" in filter) {
+//         if ("mode" in filter && filter.mode === "lower") {
+//           // Handle range filter (e.g., artist_sp_followers with "lower" mode)
+//           whereClauses.push(`${key} >= $${valueIndex}`);
+//           values.push(filter.value[0]);
+//         } else if ("mode" in filter && filter.mode === "greater") {
+//           whereClauses.push(`${key} <= $${valueIndex}`);
+//           values.push(filter.value[0]);
+//         } else if (Array.isArray(filter.value)) {
+//           if (filter.mode == "range") {
+//             whereClauses.push(
+//               `${key} BETWEEN $${valueIndex} AND $${valueIndex + 1}`
+//             );
+//             values.push(filter.value[0], filter.value[1]);
+//             valueIndex += 1;
+//           } else if (isArray[key]) {
+//             whereClauses.push(`${key}  && $${valueIndex}`);
+//             values.push(filter.value);
+//           } else {
+//             // Handle arrays (e.g., location_ne_country)
+//             whereClauses.push(`${key} = ANY($${valueIndex})`);
+//             values.push(filter.value);
+//           }
+//         } else {
+//           whereClauses.push(`${key} = $${valueIndex}`);
+//           values.push(filter.value);
+//         }
+//         valueIndex++;
+//       }
+//     }
+//   }
+
+//   let searchClause = "";
+//   if (query && query.value && query.key) {
+//     if (query.key == "*") {
+//       searchClause = `AND (artist_sp_name ILIKE $${valueIndex} OR track_sp_name ILIKE $${valueIndex} OR (${get_query_array(
+//         valueIndex,
+//         "station_ar_genre",
+//         "station_ar_genre"
+//       )}) OR event_ma_id ILIKE $${valueIndex})`;
+//     } else {
+//       if (query.key === "station_ar_genre")
+//         searchClause = `AND (${get_query_array(
+//           valueIndex,
+//           "station_ar_genre",
+//           "station_ar_genre"
+//         )})`;
+//       else
+//         searchClause = `AND (${query.key[0]}.${query.key} ILIKE $${valueIndex})`;
+//     }
+//     values.push(`%${query.value}%`);
+//     valueIndex++;
+//   }
+
+//   let whereClause =
+//     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+//   if (!whereClauses.length && searchClause.length) {
+//     whereClause = "WHERE ";
+//     searchClause = searchClause.slice(4, searchClause.length);
+//   }
+//   return { whereClause, searchClause, orderClause, valueIndex, values };
+// }
+
+// function get_query_array(valIndex, field, fieldAlt) {
+//   return `EXISTS (
+//     SELECT 1 
+//     FROM unnest(${field}) AS ${fieldAlt}
+//     WHERE ${fieldAlt} ILIKE $${valIndex}
+//   )`;
+// }
+
+// Alternative version that maintains backward compatibility but with optimizations
 export function getQuery(sortBy, sortOrder, filters, query) {
   const allowedSortColumns = new Set([
     "event_ma_id",
     "track_sp_name",
-    "event_se_description",
+    "event_se_description", 
     "location_rg_city",
     "location_rg_country",
-    "station_rg_genre",
     "station_rg_name",
     "artist_sp_name",
   ]);
 
-  // Default sorting
   let orderClause = "ORDER BY event_ma_id ASC";
   if (sortBy && allowedSortColumns.has(sortBy)) {
     const order = sortOrder.toUpperCase() === "DESC" ? "DESC" : "ASC";
@@ -89,28 +183,27 @@ export function getQuery(sortBy, sortOrder, filters, query) {
   let whereClauses = [];
   let values = [];
   let valueIndex = 1;
+
   if (filters && Object.keys(filters).length > 0) {
     for (const [key, filter] of Object.entries(filters)) {
       if (filter && typeof filter === "object" && "value" in filter) {
         if ("mode" in filter && filter.mode === "lower") {
-          // Handle range filter (e.g., artist_sp_followers with "lower" mode)
           whereClauses.push(`${key} >= $${valueIndex}`);
           values.push(filter.value[0]);
         } else if ("mode" in filter && filter.mode === "greater") {
           whereClauses.push(`${key} <= $${valueIndex}`);
           values.push(filter.value[0]);
         } else if (Array.isArray(filter.value)) {
-          if (filter.mode == "range") {
+          if (filter.mode === "range") {
             whereClauses.push(
               `${key} BETWEEN $${valueIndex} AND $${valueIndex + 1}`
             );
             values.push(filter.value[0], filter.value[1]);
             valueIndex += 1;
           } else if (isArray[key]) {
-            whereClauses.push(`${key}  && $${valueIndex}`);
+            whereClauses.push(`${key} && $${valueIndex}`);
             values.push(filter.value);
           } else {
-            // Handle arrays (e.g., location_ne_country)
             whereClauses.push(`${key} = ANY($${valueIndex})`);
             values.push(filter.value);
           }
@@ -125,39 +218,45 @@ export function getQuery(sortBy, sortOrder, filters, query) {
 
   let searchClause = "";
   if (query && query.value && query.key) {
-    if (query.key == "*") {
-      searchClause = `AND (artist_sp_name ILIKE $${valueIndex} OR track_sp_name ILIKE $${valueIndex} OR (${get_query_array(
+    if (query.key === "*") {
+        values.push(`%${query.value}%`); // add this
+  searchClause = `AND (
+    artist_sp_name ILIKE $${valueIndex}
+    OR track_sp_name ILIKE $${valueIndex}
+    OR (${get_query_array_optimized(valueIndex, "station_ar_genre")})
+    OR event_ma_id ILIKE $${valueIndex}
+  )`;
+    } else if (query.key === "station_ar_genre") {
+      // Keep existing array search but optimize it
+      searchClause = `AND (${get_query_array_optimized(
         valueIndex,
-        "station_ar_genre",
         "station_ar_genre"
-      )}) OR event_ma_id ILIKE $${valueIndex})`;
+      )})`;
+      values.push(`%${query.value}%`);
     } else {
-      if (query.key === "station_ar_genre")
-        searchClause = `AND (${get_query_array(
-          valueIndex,
-          "station_ar_genre",
-          "station_ar_genre"
-        )})`;
-      else
-        searchClause = `AND (${query.key[0]}.${query.key} ILIKE $${valueIndex})`;
+      // FIX: Remove the syntax error in original code
+      // Original: `AND (${query.key[0]}.${query.key} ILIKE $${valueIndex})`
+      // Fixed:
+      searchClause = `AND ${query.key} ILIKE $${valueIndex}`;
+      values.push(`%${query.value}%`);
     }
-    values.push(`%${query.value}%`);
     valueIndex++;
   }
 
-  let whereClause =
-    whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+  let whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
   if (!whereClauses.length && searchClause.length) {
     whereClause = "WHERE ";
     searchClause = searchClause.slice(4, searchClause.length);
   }
+
   return { whereClause, searchClause, orderClause, valueIndex, values };
 }
 
-function get_query_array(valIndex, field, fieldAlt) {
+// Optimized array query function
+function get_query_array_optimized(valIndex, field) {
   return `EXISTS (
     SELECT 1 
-    FROM unnest(${field}) AS ${fieldAlt}
-    WHERE ${fieldAlt} ILIKE $${valIndex}
+    FROM unnest(${field}) AS genre_item
+    WHERE genre_item ILIKE $${valIndex}
   )`;
 }

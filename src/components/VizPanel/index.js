@@ -40,7 +40,7 @@ import dynamic from "next/dynamic";
 import ParallelCoordinatesPlot from "../ParallelCoordinatesPlot";
 
 const TOP = 10;
-const GraphClient = dynamic(() => import("@/components/VizPanel/Network"), {
+const NetworkVisualizationContainer = dynamic(() => import("@/components/VizPanel/Network/NetworkVisualizationContainer"), {
   ssr: false,
 });
 
@@ -52,6 +52,7 @@ function VizPanel({
   onChangehistMetrics,
   scatterMetrics,
   onChangescatterMetrics,
+  onChangeNetwork,
   onChangeSource,
   onSelect,
 }) {
@@ -133,12 +134,14 @@ function VizPanel({
   }, [data?.radar]);
   useEffect(() => {
     const network = data?.network;
-    if (network && Object.keys(network).length) {
-      const network_data = Object.values(network)[0]?.data ?? {};
+    // if (network && Object.keys(network).length) {
+    if (network) {
+      const network_data = network.data ?? {};
       setNetwork({
         key: "artist,genere",
         label: "Artist Network by Genere",
         data: network_data,
+        parameters:network.parameters??{}
       });
     }
   }, [data?.network]);
@@ -325,9 +328,9 @@ function VizPanel({
             type="network"
             chartData={network?.data}
           >
-            <AutoSizer style={{ height: 300, width: "100%" }}>
+            <AutoSizer style={{ height:"300px",width: "100%" }}>
               {({ height, width }) => {
-                return <GraphClient data={network?.data} threshold={1} />;
+                return <NetworkVisualizationContainer fetchNetworkData={(opt)=>onChangeNetwork(opt)} data={network?.data} />;
               }}
             </AutoSizer>
           </PlotlHolder>
