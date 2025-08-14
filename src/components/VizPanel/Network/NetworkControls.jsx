@@ -61,7 +61,7 @@ export default function NetworkControls({
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow space-y-4">
+    <div className="bg-background p-4 rounded-lg shadow space-y-4">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

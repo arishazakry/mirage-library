@@ -25,6 +25,7 @@ export async function POST(req) {
           metadataVariable = "artists", // artists, genres, timbres
           maxNodes = 100,
           communityDetection = false,
+          threshold=1,
         } = body;
         
         filters = filters ?? {};
@@ -61,8 +62,7 @@ export async function POST(req) {
            track_sp_id,
            artist_sp_id,
            artist_sp_name,
-           artist_sp_genre,
-
+           artist_sp_genre
            FROM event_flat ${whereClause};`,
           values
         );
@@ -72,6 +72,7 @@ export async function POST(req) {
         await getNetwork(
           client,
           tempTableName,
+          threshold,
           metadataVariable,
           maxNodes,
           communityDetection,

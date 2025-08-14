@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from "react";
 import Sigma from "sigma";
+import { downloadAsImage } from "@sigma/export-image";
 import Graph from "graphology";
 import FA2Layout from "graphology-layout-forceatlas2/worker";
 import { extent, scaleSqrt, scaleOrdinal, schemeCategory10 } from "d3";
+import { debounce } from "lodash";
+import { Button } from "@/components/ui/button";
 
 export const emptyGraph = {
   nodes: [],
@@ -26,6 +29,13 @@ const GraphVisualization = forwardRef(({
   const layoutRef = useRef(null);
   const [isLayoutRunning, setIsLayoutRunning] = useState(false);
   const [networkStats, setNetworkStats] = useState({});
+  
+  // Drag and drop state with force modulation
+  const dragStateRef = useRef({
+    isDragging: false,
+    draggedNode: null,
+    dragStartTime: null
+  });
 
   const startLayout = () => {
     if (layoutRef.current && !isLayoutRunning) {
@@ -50,6 +60,285 @@ const GraphVisualization = forwardRef(({
       setIsLayoutRunning(false);
       onLayoutStop?.();
     }
+  };
+
+  // Calculate network metrics using built-in graphology methods
+  const calculateNetworkMetrics = (graph) => {
+    const basicStats = {
+      nodes: graph.order,
+      edges: graph.size,
+      density: graph.order > 1 ? (2 * graph.size) / (graph.order * (graph.order - 1)) : 0,
+      avgDegree: graph.order > 0 ? (2 * graph.size) / graph.order : 0,
+    };
+
+    // Degree distribution using built-in methods
+    const degrees = [];
+    const degreeMap = {};
+    graph.forEachNode((node) => {
+      const degree = graph.degree(node);
+      degrees.push(degree);
+      degreeMap[degree] = (degreeMap[degree] || 0) + 1;
+    });
+
+    const maxDegree = Math.max(...degrees);
+    const minDegree = Math.min(...degrees);
+
+    // Community stats
+    const communities = communityDetection ? new Set(data.nodes.map(n => n.community)).size : 0;
+    
+    // Calculate modularity manually if community detection is enabled
+    let modularityScore = 0;
+    if (communityDetection && communities > 1 && graph.size > 0) {
+      const m = graph.size;
+      let modularity = 0;
+      
+      graph.forEachNode((i) => {
+        const communityI = graph.getNodeAttribute(i, 'community');
+        if (communityI === undefined) return;
+        
+        graph.forEachNode((j) => {
+          const communityJ = graph.getNodeAttribute(j, 'community');
+          if (communityJ === undefined) return;
+          
+          const aij = graph.hasEdge(i, j) ? 1 : 0;
+          const ki = graph.degree(i);
+          const kj = graph.degree(j);
+          const delta = communityI === communityJ ? 1 : 0;
+          
+          modularity += (aij - (ki * kj) / (2 * m)) * delta;
+        });
+      });
+      
+      modularityScore = modularity / (2 * m);
+    }
+    
+    // Simple clustering coefficient calculation
+    let totalClusteringCoeff = 0;
+    let validNodes = 0;
+    
+    graph.forEachNode((node) => {
+      const neighbors = graph.neighbors(node);
+      const degree = neighbors.length;
+      
+      if (degree < 2) return; // No clustering possible with less than 2 neighbors
+      
+      let triangles = 0;
+      for (let i = 0; i < neighbors.length; i++) {
+        for (let j = i + 1; j < neighbors.length; j++) {
+          if (graph.hasEdge(neighbors[i], neighbors[j])) {
+            triangles++;
+          }
+        }
+      }
+      
+      const possibleTriangles = (degree * (degree - 1)) / 2;
+      const clusteringCoeff = possibleTriangles > 0 ? triangles / possibleTriangles : 0;
+      totalClusteringCoeff += clusteringCoeff;
+      validNodes++;
+    });
+
+    const avgClusteringCoeff = validNodes > 0 ? totalClusteringCoeff / validNodes : 0;
+
+    // Connected components using graph traversal
+    const visited = new Set();
+    const components = [];
+    
+    graph.forEachNode((startNode) => {
+      if (visited.has(startNode)) return;
+      
+      const component = [];
+      const queue = [startNode];
+      
+      while (queue.length > 0) {
+        const node = queue.shift();
+        if (visited.has(node)) continue;
+        
+        visited.add(node);
+        component.push(node);
+        
+        graph.forEachNeighbor(node, (neighbor) => {
+          if (!visited.has(neighbor)) {
+            queue.push(neighbor);
+          }
+        });
+      }
+      
+      components.push(component);
+    });
+
+    const largestComponent = components.length > 0 ? Math.max(...components.map(comp => comp.length)) : 0;
+
+    // Edge weight statistics
+    const weights = [];
+    graph.forEachEdge((edge, attributes) => {
+      if (attributes.weight) weights.push(parseFloat(attributes.weight));
+    });
+
+    const weightExtent = weights.length > 0 ? [Math.min(...weights), Math.max(...weights)] : [0, 0];
+    const avgWeight = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0;
+
+    // Assortativity (degree correlation)
+    let assortativity = 0;
+    if (graph.size > 0) {
+      const edges = [];
+      graph.forEachEdge((edge, attributes, source, target) => {
+        edges.push([graph.degree(source), graph.degree(target)]);
+      });
+      
+      if (edges.length > 0) {
+        const meanX = edges.reduce((sum, [x]) => sum + x, 0) / edges.length;
+        const meanY = edges.reduce((sum, [, y]) => sum + y, 0) / edges.length;
+        
+        let numerator = 0;
+        let denomX = 0;
+        let denomY = 0;
+        
+        edges.forEach(([x, y]) => {
+          const dx = x - meanX;
+          const dy = y - meanY;
+          numerator += dx * dy;
+          denomX += dx * dx;
+          denomY += dy * dy;
+        });
+        
+        const denominator = Math.sqrt(denomX * denomY);
+        assortativity = denominator > 0 ? numerator / denominator : 0;
+      }
+    }
+
+    // Calculate edge crossings
+    const crossingData = calculateEdgeCrossings(graph);
+
+    return {
+      ...basicStats,
+      communities,
+      modularity: modularityScore.toFixed(4),
+      connectedComponents: components.length,
+      largestComponent,
+      componentRatio: graph.order > 0 ? (largestComponent / graph.order).toFixed(3) : '0.000',
+      weightExtent,
+      avgWeight: avgWeight.toFixed(2),
+      maxDegree,
+      minDegree,
+      avgClusteringCoeff: avgClusteringCoeff.toFixed(4),
+      assortativity: assortativity.toFixed(4),
+      degreeDistribution: degreeMap,
+      // Graph diameter (approximate - using BFS from random node)
+      estimatedDiameter: estimateDiameter(graph),
+      // Edge crossing analysis
+      edgeCrossings: crossingData.crossings,
+      crossingDensity: crossingData.crossingDensity.toFixed(4),
+      crossingPairs: crossingData.crossingPairs,
+    };
+  };
+
+  // Helper function to check if two line segments intersect
+  const doLinesIntersect = (p1, q1, p2, q2) => {
+    const orientation = (p, q, r) => {
+      const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+      if (val === 0) return 0; // collinear
+      return (val > 0) ? 1 : 2; // clock or counterclock wise
+    };
+
+    const onSegment = (p, q, r) => {
+      return (q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+              q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y));
+    };
+
+    const o1 = orientation(p1, q1, p2);
+    const o2 = orientation(p1, q1, q2);
+    const o3 = orientation(p2, q2, p1);
+    const o4 = orientation(p2, q2, q1);
+
+    // General case
+    if (o1 !== o2 && o3 !== o4) return true;
+
+    // Special cases
+    if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+    if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+    if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+    if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+
+    return false;
+  };
+
+  // Calculate edge crossings
+  const calculateEdgeCrossings = (graph) => {
+    const edges = [];
+    const positions = {};
+    
+    // Get all edge positions
+    graph.forEachEdge((edge, attributes, source, target) => {
+      const sourcePos = graph.getNodeAttributes(source);
+      const targetPos = graph.getNodeAttributes(target);
+      
+      positions[source] = { x: sourcePos.x, y: sourcePos.y };
+      positions[target] = { x: targetPos.x, y: targetPos.y };
+      
+      edges.push({
+        id: edge,
+        source: source,
+        target: target,
+        sourcePos: positions[source],
+        targetPos: positions[target]
+      });
+    });
+
+    let crossings = 0;
+    const crossingPairs = [];
+
+    // Check all pairs of edges for intersections
+    for (let i = 0; i < edges.length; i++) {
+      for (let j = i + 1; j < edges.length; j++) {
+        const edge1 = edges[i];
+        const edge2 = edges[j];
+
+        // Skip if edges share a node
+        if (edge1.source === edge2.source || edge1.source === edge2.target ||
+            edge1.target === edge2.source || edge1.target === edge2.target) {
+          continue;
+        }
+
+        if (doLinesIntersect(
+          edge1.sourcePos, edge1.targetPos,
+          edge2.sourcePos, edge2.targetPos
+        )) {
+          crossings++;
+          crossingPairs.push([edge1.id, edge2.id]);
+        }
+      }
+    }
+
+    return {
+      crossings,
+      crossingPairs,
+      crossingDensity: edges.length > 1 ? crossings / (edges.length * (edges.length - 1) / 2) : 0
+    };
+  };
+  const estimateDiameter = (graph) => {
+    if (graph.order === 0) return 0;
+    
+    const nodes = graph.nodes();
+    const startNode = nodes[Math.floor(Math.random() * nodes.length)];
+    
+    let maxDistance = 0;
+    const distances = { [startNode]: 0 };
+    const queue = [startNode];
+    
+    while (queue.length > 0) {
+      const node = queue.shift();
+      const currentDistance = distances[node];
+      
+      graph.forEachNeighbor(node, (neighbor) => {
+        if (!(neighbor in distances)) {
+          distances[neighbor] = currentDistance + 1;
+          maxDistance = Math.max(maxDistance, currentDistance + 1);
+          queue.push(neighbor);
+        }
+      });
+    }
+    
+    return maxDistance;
   };
 
   // Expose layout controls to parent component via ref
@@ -92,17 +381,22 @@ const GraphVisualization = forwardRef(({
         community: node.community,
         originalSize: node.size,
         genres: node.genres || [],
+        highlighted: false,
       });
     });
 
     // Add edges filtered by threshold
     const filteredEdges = data.edges.filter((edge) => +edge.weight >= threshold);
-    
+    // Compute edge weight scale
+    const weightExtent = extent(filteredEdges, (e) => +e.weight);
+    const weightScale = scaleSqrt()
+      .domain(weightExtent)
+      .range([0.5, 5]); // min/max thickness
     filteredEdges.forEach((edge) => {
       if (graph.hasNode(edge.source) && graph.hasNode(edge.target)) {
         graph.addEdge(edge.source, edge.target, {
           label: `${edge.weight}`,
-          size: Math.max(0.5, Math.min(5, edge.weight / 2)),
+          size: weightScale(edge.weight / 2),
           color: "#ccc",
           weight: edge.weight,
         });
@@ -110,13 +404,8 @@ const GraphVisualization = forwardRef(({
     });
 
     // Calculate network statistics
-    const stats = {
-      nodes: graph.order,
-      edges: graph.size,
-      density: graph.size / (graph.order * (graph.order - 1) / 2),
-      communities: communityDetection ? new Set(data.nodes.map(n => n.community)).size : 0,
-      avgDegree: graph.size * 2 / graph.order,
-    };
+    const stats = calculateNetworkMetrics(graph);
+    stats.weightScale = weightScale;
     setNetworkStats(stats);
 
     // Create renderer
@@ -129,7 +418,67 @@ const GraphVisualization = forwardRef(({
       labelWeight: "bold",
       enableEdgeClickEvents: true,
       enableEdgeWheelEvents: true,
+      minCameraRatio: 0.1,
+      maxCameraRatio: 10,
     });
+
+    // Drag and Drop Implementation with soft force
+    const handleMouseDown = (e) => {
+      dragStateRef.current.isDragging = true;
+      dragStateRef.current.draggedNode = e.node;
+      dragStateRef.current.dragStartTime = Date.now();
+      graph.setNodeAttribute(e.node, "highlighted", true);
+      graph.setNodeAttribute(e.node, "draggedRecently", true);
+      renderer.refresh();
+      // Don't completely disable camera, just set custom bbox
+      if (!renderer.getCustomBBox()) {
+        renderer.setCustomBBox(renderer.getBBox());
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      if (!dragStateRef.current.isDragging || !dragStateRef.current.draggedNode) return;
+
+      // Get new position of node
+      const pos = renderer.viewportToGraph(e.event);
+      graph.setNodeAttribute(dragStateRef.current.draggedNode, "x", pos.x);
+      graph.setNodeAttribute(dragStateRef.current.draggedNode, "y", pos.y);
+
+      // Prevent sigma from moving camera
+      e.event.preventSigmaDefault();
+      e.event.original.preventDefault();
+      e.event.original.stopPropagation();
+    };
+
+    const handleMouseUp = () => {
+      if (dragStateRef.current.draggedNode) {
+        graph.removeNodeAttribute(dragStateRef.current.draggedNode, "highlighted");
+        
+        // Set a timer to remove the "recently dragged" status after a few seconds
+        // This allows the force to gradually take effect
+        setTimeout(() => {
+          if (graph.hasNode(dragStateRef.current.draggedNode)) {
+            graph.removeNodeAttribute(dragStateRef.current.draggedNode, "draggedRecently");
+          }
+        }, 3000); // 3 seconds of reduced force
+      }
+      dragStateRef.current.isDragging = false;
+      dragStateRef.current.draggedNode = null;
+      
+      // Re-enable camera movement
+      renderer.setCustomBBox(null);
+    };
+    const updateMetrics = debounce(() => {
+      const stats = calculateNetworkMetrics(graph);
+      stats.weightScale = weightScale;
+      setNetworkStats(stats);
+    }, 300);
+    // Add drag and drop event listeners
+    renderer.on("afterRender", updateMetrics);
+    renderer.on("downNode", handleMouseDown);
+    renderer.on("moveBody", handleMouseMove);
+    renderer.on("upNode", handleMouseUp);
+    renderer.on("upStage", handleMouseUp);
 
     // Add hover effects
     renderer.on("enterNode", ({ node }) => {
@@ -159,13 +508,15 @@ const GraphVisualization = forwardRef(({
     });
 
     renderer.on("leaveNode", ({ node }) => {
-      // Reset colors
+      // Reset colors (but preserve drag highlighting)
       data.nodes.forEach((n) => {
         const originalColor = communityDetection && n.community !== undefined 
           ? communityColors(n.community)
           : "#666";
         graph.setNodeAttribute(n.id, "color", originalColor);
-        graph.setNodeAttribute(n.id, "highlighted", false);
+        if (!dragStateRef.current.isDragging || dragStateRef.current.draggedNode !== n.id) {
+          graph.setNodeAttribute(n.id, "highlighted", false);
+        }
       });
       
       graph.forEachEdge((edge, attributes) => {
@@ -176,7 +527,7 @@ const GraphVisualization = forwardRef(({
       renderer.refresh();
     });
 
-    // Create layout
+    // Create layout with gradual force application for dragged nodes
     const layout = new FA2Layout(graph, { 
       settings: { 
         slowDown: 10,
@@ -184,12 +535,21 @@ const GraphVisualization = forwardRef(({
         gravity: 0.05,
         scalingRatio: 10,
         edgeWeightInfluence: 1.5,
-      } 
+      },
+      // Apply reduced force to recently dragged nodes instead of fixing them completely
+      isNodeFixed: (node, attr) => attr.highlighted, // Only fix during active drag
+      getNodeMass: (node, attr) => {
+        // Increase mass for recently dragged nodes to reduce force influence
+        if (attr.draggedRecently && !attr.highlighted) {
+          return 10; // Higher mass = less affected by forces
+        }
+        return 1; // Normal mass
+      }
     });
 
     rendererRef.current = renderer;
     layoutRef.current = layout;
-
+    debugger
     return () => {
       if (layoutRef.current) {
         layoutRef.current.stop();
@@ -198,8 +558,22 @@ const GraphVisualization = forwardRef(({
         rendererRef.current.kill();
       }
       setIsLayoutRunning(false);
+      dragStateRef.current = { isDragging: false, draggedNode: null };
     };
-  }, [data, threshold, communityDetection]);
+  }, [data, threshold, communityDetection, containerRef]);
+
+  const onsaveNetworkAsPNG = useCallback(()=>{
+    if (rendererRef.current)
+      downloadAsImage(rendererRef.current, {
+      layers: ["edges", "nodes", "edgeLabels", "labels"], // Choose what to include
+      format: "png",                                       // or "jpeg"
+      fileName: "network-export",
+      backgroundColor: "#ffffff",
+      width: 1200,   // optional custom width
+      height: 800,   // optional custom height
+      cameraState: undefined, // use current or a reset state if needed
+    });
+  },[rendererRef])
 
   if (!data?.nodes?.length) {
     return (
@@ -211,32 +585,116 @@ const GraphVisualization = forwardRef(({
 
   return (
     <div className="w-full">
-      {/* Network Statistics */}
-      <div className="bg-white p-4 rounded-lg shadow mb-4">
-        <h3 className="text-lg font-semibold mb-2">Network Statistics</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
-          <div>
-            <span className="font-medium">Nodes:</span> {networkStats.nodes}
-          </div>
-          <div>
-            <span className="font-medium">Edges:</span> {networkStats.edges}
-          </div>
-          <div>
-            <span className="font-medium">Density:</span> {(networkStats.density || 0).toFixed(3)}
-          </div>
-          <div>
-            <span className="font-medium">Avg Degree:</span> {(networkStats.avgDegree || 0).toFixed(1)}
-          </div>
-          {communityDetection && (
-            <div>
-              <span className="font-medium">Communities:</span> {networkStats.communities}
+      {/* Enhanced Network Statistics */}
+      <div className="bg-background p-4 rounded-lg shadow mb-4">
+        <h3 className="text-lg font-semibold mb-3">Network Statistics</h3>
+        
+        {/* Basic Stats */}
+        <div className="mb-4">
+          <h4 className="text-md font-medium mb-2 text-blue-600">Basic Metrics</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-sm">
+            <div className="bg-blue-50 p-2 rounded">
+              <span className="font-medium block">Nodes:</span> 
+              <span className="text-lg">{networkStats.nodes}</span>
             </div>
-          )}
+            <div className="bg-green-50 p-2 rounded">
+              <span className="font-medium block">Edges:</span> 
+              <span className="text-lg">{networkStats.edges}</span>
+            </div>
+            <div className="bg-purple-50 p-2 rounded">
+              <span className="font-medium block">Density:</span> 
+              <span className="text-lg">{(networkStats.density || 0).toFixed(3)}</span>
+            </div>
+            <div className="bg-orange-50 p-2 rounded">
+              <span className="font-medium block">Avg Degree:</span> 
+              <span className="text-lg">{(networkStats.avgDegree || 0).toFixed(1)}</span>
+            </div>
+            <div className="bg-red-50 p-2 rounded">
+              <span className="font-medium block">Components:</span> 
+              <span className="text-lg">{networkStats.connectedComponents}</span>
+            </div>
+            <div className="bg-yellow-50 p-2 rounded">
+              <span className="font-medium block">Largest Comp:</span> 
+              <span className="text-lg">{networkStats.largestComponent}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Community Detection Stats */}
+        {communityDetection && (
+          <div className="mb-4">
+            <h4 className="text-md font-medium mb-2 text-green-600">Community Structure</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+              <div className="bg-green-50 p-2 rounded">
+                <span className="font-medium block">Communities:</span> 
+                <span className="text-lg">{networkStats.communities}</span>
+              </div>
+              <div className="bg-green-50 p-2 rounded">
+                <span className="font-medium block">Modularity:</span> 
+                <span className="text-lg">{networkStats.modularity}</span>
+              </div>
+              <div className="bg-green-50 p-2 rounded">
+                <span className="font-medium block">Component Ratio:</span> 
+                <span className="text-lg">{networkStats.componentRatio}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Network Structure Metrics */}
+        <div className="mb-4">
+          <h4 className="text-md font-medium mb-2 text-purple-600">Network Structure</h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
+            <div className="bg-purple-50 p-2 rounded">
+              <span className="font-medium block">Clustering Coeff:</span> 
+              <span className="text-lg">{networkStats.avgClusteringCoeff}</span>
+            </div>
+            <div className="bg-purple-50 p-2 rounded">
+              <span className="font-medium block">Assortativity:</span> 
+              <span className="text-lg">{networkStats.assortativity}</span>
+            </div>
+            <div className="bg-purple-50 p-2 rounded">
+              <span className="font-medium block">Est. Diameter:</span> 
+              <span className="text-lg">{networkStats.estimatedDiameter}</span>
+            </div>
+            <div className="bg-purple-50 p-2 rounded">
+              <span className="font-medium block">Edge Crossings:</span> 
+              <span className="text-lg">{networkStats.edgeCrossings}</span>
+            </div>
+            <div className="bg-purple-50 p-2 rounded">
+              <span className="font-medium block">Crossing Density:</span> 
+              <span className="text-lg">{networkStats.crossingDensity}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Edge Weight Statistics */}
+        <div>
+          <h4 className="text-md font-medium mb-2 text-orange-600">Edge Statistics</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div className="bg-orange-50 p-2 rounded">
+              <span className="font-medium block">Min Weight:</span> 
+              <span className="text-lg">{networkStats.weightExtent?.[0] ?? 0}</span>
+            </div>
+            <div className="bg-orange-50 p-2 rounded">
+              <span className="font-medium block">Max Weight:</span> 
+              <span className="text-lg">{networkStats.weightExtent?.[1] ?? 0}</span>
+            </div>
+            <div className="bg-orange-50 p-2 rounded">
+              <span className="font-medium block">Avg Weight:</span> 
+              <span className="text-lg">{networkStats.avgWeight}</span>
+            </div>
+            <div className="bg-orange-50 p-2 rounded">
+              <span className="font-medium block">Degree Range:</span> 
+              <span className="text-lg">{networkStats.minDegree}-{networkStats.maxDegree}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Layout Controls */}
-      <div className="bg-white p-4 rounded-lg shadow mb-4">
+      <div className="bg-background p-4 rounded-lg shadow mb-4">
+        <h4 className="text-md font-medium mb-2">Controls</h4>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={startLayout}
@@ -252,12 +710,49 @@ const GraphVisualization = forwardRef(({
           >
             Stop Layout
           </button>
+
+           <Button
+            onClick={onsaveNetworkAsPNG}
+            className="px-4 py-2"
+          >
+            Save image
+          </Button>
         </div>
+        <p className="text-sm text-gray-600 mt-2">
+          💡 <strong>Tip:</strong> Click and drag nodes to reposition them. Dragged nodes will have reduced force for 3 seconds, allowing gradual settling while maintaining some layout dynamics.
+        </p>
       </div>
 
       {/* Graph Container */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-background rounded-lg shadow relative">
         <div ref={containerRef} style={{ height: "600px", width: "100%" }} />
+        <div className="absolute top-2 right-2 p-2 bg-white bg-opacity-90 rounded">
+          <h4 className="text-sm font-semibold mb-1">Edge Weight Legend</h4>
+          <div className="flex flex-col gap-1">
+            {/* Thin edge */}
+            <div className="flex items-center gap-2">
+              <svg width="30" height="8">
+                <line 
+                  x1="0" y1="4" x2="30" y2="4" 
+                  stroke="#ccc" 
+                  strokeWidth={networkStats.weightScale ? networkStats.weightScale(networkStats.weightExtent?.[0] ?? 0) : 1}
+                />
+              </svg>
+              <span className="text-xs">Low ({networkStats.weightExtent?.[0] ?? 0})</span>
+            </div>
+            {/* Thick edge */}
+            <div className="flex items-center gap-2">
+              <svg width="30" height="8">
+                <line 
+                  x1="0" y1="4" x2="30" y2="4" 
+                  stroke="#ccc" 
+                  strokeWidth={networkStats.weightScale ? networkStats.weightScale(networkStats.weightExtent?.[1] ?? 0) : 5}
+                />
+              </svg>
+              <span className="text-xs">High ({networkStats.weightExtent?.[1] ?? 0})</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Legend for Community Detection */}
