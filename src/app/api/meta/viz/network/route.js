@@ -55,7 +55,7 @@ export async function POST(req) {
           "_"
         )}`;
 
-        // Create temp table with all necessary columns
+        // Create temp table with all necessary columns - FIXED: removed trailing comma
         await client.query(
           `CREATE TEMP TABLE ${tempTableName} AS
            SELECT event_ma_id,
@@ -114,7 +114,6 @@ export async function POST(req) {
 export async function getNetwork(
   client,
   tempTableName,
-  threshold = 1,
   metadataVariable = "artists",
   maxNodes = 100,
   communityDetection = false,
@@ -160,7 +159,6 @@ export async function getNetwork(
   controller.enqueue(
     encoder.encode(
       `event: network\ndata: ${JSON.stringify({
-      // `event: network_${metadataVariable}\ndata: ${JSON.stringify({
         mode: "network",
         metric: metadataVariable,
         data,

@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
+export const defaultParameter = {
+    threshold: 1,
+    metadataVariable: "artists",
+    maxNodes: 100,
+    communityDetection: false,
+  };
 export default function NetworkControls({
   parameters = {
     threshold: 1,
     metadataVariable: "artists",
-    maxNodes: 50,
+    maxNodes: 100,
     communityDetection: false,
   },
   onParameterChange,
