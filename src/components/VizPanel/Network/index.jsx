@@ -37,30 +37,59 @@ const GraphVisualization = forwardRef(({
     dragStartTime: null
   });
 
-  const startLayout = () => {
+  const startLayout = useCallback(() => {
+    console.log("Starting layout...", { 
+      layoutExists: !!layoutRef.current, 
+      isRunning: isLayoutRunning,
+      graphNodes: layoutRef.current?.graph?.order
+    });
+    
     if (layoutRef.current && !isLayoutRunning) {
-      layoutRef.current.start();
-      setIsLayoutRunning(true);
-      onLayoutStart?.();
-      
-      // Auto-stop after 10 seconds
-      setTimeout(() => {
-        if (layoutRef.current) {
-          layoutRef.current.stop();
-          setIsLayoutRunning(false);
-          onLayoutStop?.();
+      try {
+        // Ensure the layout has a valid graph with nodes
+        if (!layoutRef.current.graph || layoutRef.current.graph.order === 0) {
+          console.warn("Layout graph is empty or invalid");
+          return;
         }
-      }, 10000);
+        
+        layoutRef.current.start();
+        setIsLayoutRunning(true);
+        onLayoutStart?.();
+        console.log("Layout started successfully");
+        
+        // Auto-stop after 10 seconds
+        setTimeout(() => {
+          if (layoutRef.current && isLayoutRunning) {
+            layoutRef.current.stop();
+            setIsLayoutRunning(false);
+            onLayoutStop?.();
+            console.log("Layout auto-stopped after 10 seconds");
+          }
+        }, 10000);
+      } catch (error) {
+        console.error("Error starting layout:", error);
+        setIsLayoutRunning(false);
+      }
+    } else {
+      console.log("Cannot start layout:", {
+        layoutRef: !!layoutRef.current,
+        isLayoutRunning
+      });
     }
-  };
+  }, [isLayoutRunning, onLayoutStart, onLayoutStop]);
 
-  const stopLayout = () => {
+  const stopLayout = useCallback(() => {
     if (layoutRef.current && isLayoutRunning) {
-      layoutRef.current.stop();
-      setIsLayoutRunning(false);
-      onLayoutStop?.();
+      try {
+        layoutRef.current.stop();
+        setIsLayoutRunning(false);
+        onLayoutStop?.();
+        console.log("Layout stopped successfully");
+      } catch (error) {
+        console.error("Error stopping layout:", error);
+      }
     }
-  };
+  }, [isLayoutRunning, onLayoutStop]);
 
   // Calculate network metrics using built-in graphology methods
   const calculateNetworkMetrics = (graph) => {
@@ -315,6 +344,7 @@ const GraphVisualization = forwardRef(({
       crossingDensity: edges.length > 1 ? crossings / (edges.length * (edges.length - 1) / 2) : 0
     };
   };
+  
   const estimateDiameter = (graph) => {
     if (graph.order === 0) return 0;
     
@@ -341,23 +371,41 @@ const GraphVisualization = forwardRef(({
     return maxDistance;
   };
 
-  // Expose layout controls to parent component via ref
-  useImperativeHandle(ref, () => ({
-    startLayout,
-    stopLayout,
-    isLayoutRunning,
-  }), [isLayoutRunning]);
+  // // Expose layout controls to parent component via ref
+  // useImperativeHandle(ref, () => ({
+  //   startLayout,
+  //   stopLayout,
+  //   isLayoutRunning,
+  // }), [startLayout, stopLayout, isLayoutRunning]);
 
   useEffect(() => {
+    debugger
     if (!data?.nodes?.length || !containerRef.current) return;
 
+    console.log("Initializing graph with", data.nodes.length, "nodes and", data.edges.length, "edges");
+
     // Clean up previous instances
-    if (rendererRef.current) {
-      rendererRef.current.kill();
-    }
     if (layoutRef.current) {
-      layoutRef.current.stop();
+      try {
+        layoutRef.current.stop();
+        layoutRef.current.kill?.(); // Kill the worker if it exists
+      } catch (error) {
+        console.warn("Error stopping previous layout:", error);
+      }
+      layoutRef.current = null;
     }
+    
+    if (rendererRef.current) {
+      try {
+        rendererRef.current.kill();
+      } catch (error) {
+        console.warn("Error killing previous renderer:", error);
+      }
+      rendererRef.current = null;
+    }
+
+    // Reset layout state
+    setIsLayoutRunning(false);
 
     const graph = new Graph();
     
@@ -387,11 +435,14 @@ const GraphVisualization = forwardRef(({
 
     // Add edges filtered by threshold
     const filteredEdges = data.edges.filter((edge) => +edge.weight >= threshold);
+    console.log("Filtered edges:", filteredEdges.length, "from", data.edges.length);
+    
     // Compute edge weight scale
     const weightExtent = extent(filteredEdges, (e) => +e.weight);
     const weightScale = scaleSqrt()
       .domain(weightExtent)
       .range([0.5, 5]); // min/max thickness
+      
     filteredEdges.forEach((edge) => {
       if (graph.hasNode(edge.source) && graph.hasNode(edge.target)) {
         graph.addEdge(edge.source, edge.target, {
@@ -402,6 +453,8 @@ const GraphVisualization = forwardRef(({
         });
       }
     });
+
+    console.log("Final graph:", graph.order, "nodes,", graph.size, "edges");
 
     // Calculate network statistics
     const stats = calculateNetworkMetrics(graph);
@@ -468,11 +521,13 @@ const GraphVisualization = forwardRef(({
       // Re-enable camera movement
       renderer.setCustomBBox(null);
     };
+    
     const updateMetrics = debounce(() => {
       const stats = calculateNetworkMetrics(graph);
       stats.weightScale = weightScale;
       setNetworkStats(stats);
     }, 300);
+    
     // Add drag and drop event listeners
     renderer.on("afterRender", updateMetrics);
     renderer.on("downNode", handleMouseDown);
@@ -527,40 +582,56 @@ const GraphVisualization = forwardRef(({
       renderer.refresh();
     });
 
-    // Create layout with gradual force application for dragged nodes
-    const layout = new FA2Layout(graph, { 
-      settings: { 
-        slowDown: 10,
-        strongGravityMode: true,
-        gravity: 0.05,
-        scalingRatio: 10,
-        edgeWeightInfluence: 1.5,
-      },
-      // Apply reduced force to recently dragged nodes instead of fixing them completely
-      isNodeFixed: (node, attr) => attr.highlighted, // Only fix during active drag
-      getNodeMass: (node, attr) => {
-        // Increase mass for recently dragged nodes to reduce force influence
-        if (attr.draggedRecently && !attr.highlighted) {
-          return 10; // Higher mass = less affected by forces
+    // Create layout with improved settings and error handling
+    try {
+      const layout = new FA2Layout(graph, { 
+        settings: { 
+          slowDown: 10,
+          strongGravityMode: true,
+          gravity: 0.05,
+          scalingRatio: 10,
+          edgeWeightInfluence: 1.5,
+        },
+        // Apply reduced force to recently dragged nodes instead of fixing them completely
+        isNodeFixed: (node, attr) => attr.highlighted, // Only fix during active drag
+        getNodeMass: (node, attr) => {
+          // Increase mass for recently dragged nodes to reduce force influence
+          if (attr.draggedRecently && !attr.highlighted) {
+            return 10; // Higher mass = less affected by forces
+          }
+          return 1; // Normal mass
         }
-        return 1; // Normal mass
-      }
-    });
+      });
 
-    rendererRef.current = renderer;
-    layoutRef.current = layout;
-    debugger
+      console.log("Layout created successfully");
+      layoutRef.current = layout;
+      rendererRef.current = renderer;
+    } catch (error) {
+      console.error("Error creating layout:", error);
+      rendererRef.current = renderer;
+    }
+
     return () => {
+      console.log("Cleaning up graph visualization");
       if (layoutRef.current) {
-        layoutRef.current.stop();
+        try {
+          layoutRef.current.stop();
+          layoutRef.current.kill?.();
+        } catch (error) {
+          console.warn("Error cleaning up layout:", error);
+        }
       }
       if (rendererRef.current) {
-        rendererRef.current.kill();
+        try {
+          rendererRef.current.kill();
+        } catch (error) {
+          console.warn("Error cleaning up renderer:", error);
+        }
       }
       setIsLayoutRunning(false);
       dragStateRef.current = { isDragging: false, draggedNode: null };
     };
-  }, [data, threshold, communityDetection, containerRef]);
+  }, [data, threshold, communityDetection]);
 
   const onsaveNetworkAsPNG = useCallback(()=>{
     if (rendererRef.current)

@@ -195,8 +195,6 @@ export async function POST(req) {
         await getNetwork(
           client,
           tempTableName,
-
-          graphThreshold,
           graphMetadataVariable,
           graphMaxNodes,
           communityDetection,

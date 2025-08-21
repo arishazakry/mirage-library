@@ -57,14 +57,14 @@ export default function NetworkVisualizationContainer({
     setLayoutKey(prev => prev + 1);
   }, [fetchNetworkData]);
 
-  const handleLayoutStart = useCallback(() => {
-    // Force re-initialization of the graph layout
-    setLayoutKey(prev => prev + 1);
-  }, []);
+  // const handleLayoutStart = useCallback(() => {
+  //   // Force re-initialization of the graph layout
+  //   setLayoutKey(prev => prev + 1);
+  // }, []);
 
-  const handleLayoutStop = useCallback(() => {
-    // Optional: handle layout completion
-  }, []);
+  // const handleLayoutStop = useCallback(() => {
+  //   // Optional: handle layout completion
+  // }, []);
 
   return (
     <div ref={containerRef} className="flex-col h-full w-full">
@@ -82,8 +82,8 @@ export default function NetworkVisualizationContainer({
           threshold={parameters.threshold}
           communityDetection={parameters.communityDetection}
           containerSize={containerSize} // Pass container size if component supports it
-          onLayoutStart={handleLayoutStart}
-          onLayoutStop={handleLayoutStop}
+          // onLayoutStart={handleLayoutStart}
+          // onLayoutStop={handleLayoutStop}
         />
       </div>
     </div>

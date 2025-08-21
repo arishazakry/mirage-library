@@ -72,7 +72,6 @@ export async function POST(req) {
         await getNetwork(
           client,
           tempTableName,
-          threshold,
           metadataVariable,
           maxNodes,
           communityDetection,
@@ -121,7 +120,7 @@ export async function getNetwork(
   encoder
 ) {
   let query = "";
-  
+  console.log(metadataVariable)
   switch (metadataVariable) {
     case "artists":
       query = getArtistNetworkQuery(tempTableName, maxNodes);
