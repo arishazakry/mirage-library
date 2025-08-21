@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import GraphVisualization from "./index";
 import NetworkControls, { defaultParameter } from "./NetworkControls";
 import { emptyGraph } from ".";
+import { diffObjects } from "@/lib/utils";
 
 const defaultParameters = {
   threshold: 1,
@@ -17,7 +18,7 @@ export default function NetworkVisualizationContainer({
   fetchNetworkData=()=>{},
 }) {
   const [parameters, setParameters] = useState(defaultParameters);
-  const [layoutKey, setLayoutKey] = useState(0); // Force re-render key
+  // const [layoutKey, setLayoutKey] = useState(0); // Force re-render key
   const containerRef = useRef(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
@@ -30,7 +31,7 @@ export default function NetworkVisualizationContainer({
         const { width, height } = entry.contentRect;
         setContainerSize({ width, height });
         // Trigger layout update when container resizes
-        setLayoutKey(prev => prev + 1);
+        // setLayoutKey(prev => prev + 1);
       }
     });
 
@@ -39,22 +40,24 @@ export default function NetworkVisualizationContainer({
   }, []);
 
   // Force refresh when data changes
-  useEffect(() => {
-    setLayoutKey(prev => prev + 1);
-  }, [data]);
+  // useEffect(() => {
+  //   setLayoutKey(prev => prev + 1);
+  // }, [data]);
 
   const handleParameterChange = useCallback((newParameters) => {
     const updatedParams = { ...parameters, ...newParameters };
     setParameters(updatedParams);
-    fetchNetworkData(updatedParams);
-    // Force layout restart
-    setLayoutKey(prev => prev + 1);
+    const changed = diffObjects(parameters,newParameters);
+    if (changed["maxNodes"]|| changed["metadataVariable"]){
+      fetchNetworkData(updatedParams);
+      // setLayoutKey(prev => prev + 1);
+    }
   }, [parameters, fetchNetworkData]);
 
   const handleRefresh = useCallback(() => {
     setParameters(defaultParameter);
     fetchNetworkData(defaultParameter);
-    setLayoutKey(prev => prev + 1);
+    // setLayoutKey(prev => prev + 1);
   }, [fetchNetworkData]);
 
   // const handleLayoutStart = useCallback(() => {
@@ -77,7 +80,7 @@ export default function NetworkVisualizationContainer({
       />
       <div className="flex-1 min-h-0"> {/* Ensure proper flex sizing */}
         <GraphVisualization
-          key={layoutKey} // Force re-mount when layout needs updating
+          // key={layoutKey} // Force re-mount when layout needs updating
           data={data}
           threshold={parameters.threshold}
           communityDetection={parameters.communityDetection}

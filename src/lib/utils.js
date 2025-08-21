@@ -32,3 +32,21 @@ export default async function checkAPIKey(req) {
   const validKey = process.env.DATA_API_KEY; // Store API key securely in .env
   return apiKey === validKey;
 }
+
+
+export function diffObjects(obj1, obj2) {
+  const diffs = {};
+
+  const allKeys = new Set([...Object.keys(obj1), ...Object.keys(obj2)]);
+
+  allKeys.forEach((key) => {
+    const val1 = obj1[key];
+    const val2 = obj2[key];
+
+    if (val1 !== val2) {
+      diffs[key] = { before: val1, after: val2 };
+    }
+  });
+
+  return diffs;
+}

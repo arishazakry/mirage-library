@@ -4,11 +4,11 @@ import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallba
 import Sigma from "sigma";
 import { downloadAsImage } from "@sigma/export-image";
 import Graph from "graphology";
+import FA2Layout from "graphology-layout-forceatlas2/worker";
 import { extent, scaleSqrt, scaleOrdinal, schemeCategory10 } from "d3";
 import { debounce } from "lodash";
 import { Button } from "@/components/ui/button";
 import louvain from "graphology-communities-louvain";
-import forceAtlas2 from "graphology-layout-forceatlas2";
 
 export const emptyGraph = {
   nodes: [],
@@ -18,73 +18,18 @@ export const emptyGraph = {
 // Community color scheme
 const communityColors = scaleOrdinal(schemeCategory10);
 
-// Function to perform community detection with specified number of communities
-const detectCommunities = (graph, numCommunities) => {
-  // First, run the standard Louvain algorithm
-  const communities = louvain(graph);
-  
-  // If we already have the desired number of communities, return
-  const uniqueCommunities = new Set(Object.values(communities));
-  if (uniqueCommunities.size <= numCommunities) {
-    return communities;
-  }
-  
-  // If we need to reduce the number of communities, we'll merge the smallest ones
-  const communitySizes = {};
-  Object.values(communities).forEach(community => {
-    communitySizes[community] = (communitySizes[community] || 0) + 1;
-  });
-  
-  // Sort communities by size (ascending)
-  const sortedCommunities = Object.entries(communitySizes)
-    .sort((a, b) => a[1] - b[1])
-    .map(([community]) => parseInt(community));
-  
-  // Create a mapping to merge smallest communities into larger ones
-  const communityMapping = {};
-  let targetCommunityIndex = sortedCommunities.length - 1;
-  
-  // Merge smallest communities until we reach the desired number
-  for (let i = 0; i < sortedCommunities.length - numCommunities; i++) {
-    const smallCommunity = sortedCommunities[i];
-    const targetCommunity = sortedCommunities[targetCommunityIndex];
-    
-    // Map the small community to the target community
-    communityMapping[smallCommunity] = targetCommunity;
-    
-    // Move to next target community (cycling through the largest ones)
-    targetCommunityIndex = (targetCommunityIndex - 1) % sortedCommunities.length;
-    if (targetCommunityIndex < sortedCommunities.length - numCommunities) {
-      targetCommunityIndex = sortedCommunities.length - 1;
-    }
-  }
-  
-  // Apply the mapping to create the final communities
-  const finalCommunities = {};
-  graph.forEachNode(node => {
-    let community = communities[node];
-    while (communityMapping[community]) {
-      community = communityMapping[community];
-    }
-    finalCommunities[node] = community;
-  });
-  
-  return finalCommunities;
-};
-
 const GraphVisualization = forwardRef(({ 
   data = emptyGraph, 
   threshold = 1,
   communityDetection = false,
-  numCommunities = 4,
+  numCommunities  = 4,
   onLayoutStart,
   onLayoutStop
 }, ref) => {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const layoutRef = useRef(null);
-  const isRunningRef = useRef(false);
-  // const [isLayoutRunning, setIsLayoutRunning] = useState(false);
+  const [isLayoutRunning, setIsLayoutRunning] = useState(false);
   const [networkStats, setNetworkStats] = useState({});
   
   // Drag and drop state with force modulation
@@ -95,35 +40,58 @@ const GraphVisualization = forwardRef(({
   });
 
   const startLayout = useCallback(() => {
+    console.log("Starting layout...", { 
+      layoutExists: !!layoutRef.current, 
+      isRunning: isLayoutRunning,
+      graphNodes: layoutRef.current?.graph?.order
+    });
     
-    if (layoutRef.current && !isRunningRef.current) {
+    if (layoutRef.current && !isLayoutRunning) {
       try {
-        isRunningRef.current = true;
+        // Ensure the layout has a valid graph with nodes
+        if (!layoutRef.current.graph || layoutRef.current.graph.order === 0) {
+          console.warn("Layout graph is empty or invalid");
+          return;
+        }
+        
+        layoutRef.current.start();
+        setIsLayoutRunning(true);
         onLayoutStart?.();
         console.log("Layout started successfully");
         
-        // Start the layout animation
-        layoutRef.current.start();
-        
+        // Auto-stop after 10 seconds
+        setTimeout(() => {
+          if (layoutRef.current && isLayoutRunning) {
+            layoutRef.current.stop();
+            setIsLayoutRunning(false);
+            onLayoutStop?.();
+            console.log("Layout auto-stopped after 10 seconds");
+          }
+        }, 10000);
       } catch (error) {
         console.error("Error starting layout:", error);
-        isRunningRef.current = false;
+        setIsLayoutRunning(false);
       }
+    } else {
+      console.log("Cannot start layout:", {
+        layoutRef: !!layoutRef.current,
+        isLayoutRunning
+      });
     }
-  }, [ onLayoutStart, onLayoutStop]);
+  }, [isLayoutRunning, onLayoutStart, onLayoutStop]);
 
   const stopLayout = useCallback(() => {
-    if (layoutRef.current && isRunningRef.current) {
+    if (layoutRef.current && isLayoutRunning) {
       try {
         layoutRef.current.stop();
-        isRunningRef.current=false;
+        setIsLayoutRunning(false);
         onLayoutStop?.();
         console.log("Layout stopped successfully");
       } catch (error) {
         console.error("Error stopping layout:", error);
       }
     }
-  }, [onLayoutStop]);
+  }, [isLayoutRunning, onLayoutStop]);
 
   // Calculate network metrics using built-in graphology methods
   const calculateNetworkMetrics = (graph) => {
@@ -405,7 +373,15 @@ const GraphVisualization = forwardRef(({
     return maxDistance;
   };
 
+  // // Expose layout controls to parent component via ref
+  // useImperativeHandle(ref, () => ({
+  //   startLayout,
+  //   stopLayout,
+  //   isLayoutRunning,
+  // }), [startLayout, stopLayout, isLayoutRunning]);
+
   useEffect(() => {
+    debugger
     if (!data?.nodes?.length || !containerRef.current) return;
 
     console.log("Initializing graph with", data.nodes.length, "nodes and", data.edges.length, "edges");
@@ -414,7 +390,7 @@ const GraphVisualization = forwardRef(({
     if (layoutRef.current) {
       try {
         layoutRef.current.stop();
-        layoutRef.current.kill?.();
+        layoutRef.current.kill?.(); // Kill the worker if it exists
       } catch (error) {
         console.warn("Error stopping previous layout:", error);
       }
@@ -431,7 +407,7 @@ const GraphVisualization = forwardRef(({
     }
 
     // Reset layout state
-    isRunningRef.current = false;
+    setIsLayoutRunning(false);
 
     const graph = new Graph();
     
@@ -440,18 +416,22 @@ const GraphVisualization = forwardRef(({
       .domain(extent(data.nodes, (d) => d.size))
       .range([3, 15]);
 
-    // Add nodes first without community coloring
+    // Add nodes with community coloring if available
     data.nodes.forEach((node) => {
+      const nodeColor = communityDetection && node.community !== undefined 
+        ? communityColors(node.community)
+        : "#666";
+        
       graph.addNode(node.id, {
         label: node.label || node.id,
         size: sizescale(node.size || 1),
-        color: "#666",
+        color: nodeColor,
         x: Math.random() * 100,
         y: Math.random() * 100,
+        community: node.community,
         originalSize: node.size,
         genres: node.genres || [],
         highlighted: false,
-        draggedRecently: false,
       });
     });
 
@@ -475,32 +455,6 @@ const GraphVisualization = forwardRef(({
         });
       }
     });
-
-    // Perform community detection if enabled
-    if (communityDetection && graph.order > 0) {
-      try {
-        console.log("Performing community detection for", numCommunities, "communities");
-        const communities = detectCommunities(graph, numCommunities);
-        
-        // Apply community colors to nodes
-        graph.forEachNode((node) => {
-          const communityId = communities[node];
-          const nodeColor = communityColors(communityId);
-          graph.setNodeAttribute(node, "color", nodeColor);
-          graph.setNodeAttribute(node, "community", communityId);
-        });
-        
-        console.log("Community detection completed with", new Set(Object.values(communities)).size, "communities");
-      } catch (error) {
-        console.error("Error in community detection:", error);
-        // Fallback: assign random communities
-        graph.forEachNode((node) => {
-          const randomCommunity = Math.floor(Math.random() * numCommunities);
-          graph.setNodeAttribute(node, "color", communityColors(randomCommunity));
-          graph.setNodeAttribute(node, "community", randomCommunity);
-        });
-      }
-    }
 
     console.log("Final graph:", graph.order, "nodes,", graph.size, "edges");
 
@@ -612,13 +566,13 @@ const GraphVisualization = forwardRef(({
 
     renderer.on("leaveNode", ({ node }) => {
       // Reset colors (but preserve drag highlighting)
-      graph.forEachNode((n, attributes) => {
-        const originalColor = communityDetection && attributes.community !== undefined 
-          ? communityColors(attributes.community)
+      data.nodes.forEach((n) => {
+        const originalColor = communityDetection && n.community !== undefined 
+          ? communityColors(n.community)
           : "#666";
-        graph.setNodeAttribute(n, "color", originalColor);
-        if (!dragStateRef.current.isDragging || dragStateRef.current.draggedNode !== n) {
-          graph.setNodeAttribute(n, "highlighted", false);
+        graph.setNodeAttribute(n.id, "color", originalColor);
+        if (!dragStateRef.current.isDragging || dragStateRef.current.draggedNode !== n.id) {
+          graph.setNodeAttribute(n.id, "highlighted", false);
         }
       });
       
@@ -630,77 +584,30 @@ const GraphVisualization = forwardRef(({
       renderer.refresh();
     });
 
-    // Create layout with synchronous ForceAtlas2
+    // Create layout with improved settings and error handling
     try {
-      const layoutSettings = {
-        slowDown: 10,
-        strongGravityMode: true,
-        gravity: 0.05,
-        scalingRatio: 10,
-        edgeWeightInfluence: 1.5,
-      };
-
-      let animationFrameId = null;
-
-      const layoutInstance = {
-        start: () => {
-          // debugger
-          // if (isLayoutRunning) return;
-          
-          // setIsLayoutRunning(true);
-          // onLayoutStart?.();
-          
-          const runIteration = () => {
-            if (!isRunningRef.current) return;
-            
-            // Apply one iteration of ForceAtlas2
-            forceAtlas2.assign(graph, {
-              settings: layoutSettings,
-              iterations: 1,
-              getEdgeWeight: (edge, attr) => attr.weight || 1,
-              isNodeFixed: (node, attr) => attr.highlighted,
-              getNodeMass: (node, attr) => {
-                // Increase mass for recently dragged nodes to reduce force influence
-                if (attr.draggedRecently && !attr.highlighted) {
-                  return 10; // Higher mass = less affected by forces
-                }
-                return 1; // Normal mass
-              }
-            });
-            
-            renderer.refresh();
-            
-            // Continue with next iteration
-            if (isRunningRef.current) {
-              animationFrameId = requestAnimationFrame(runIteration);
-            }
-          };
-          
-          // Start the animation loop
-          animationFrameId = requestAnimationFrame(runIteration);
+      const layout = new FA2Layout(graph, { 
+        settings: { 
+          slowDown: 10,
+          strongGravityMode: true,
+          gravity: 0.05,
+          scalingRatio: 10,
+          edgeWeightInfluence: 1.5,
         },
-        
-        stop: () => {
-          isRunningRef.current=(false);
-          onLayoutStop?.();
-          if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
+        // Apply reduced force to recently dragged nodes instead of fixing them completely
+        isNodeFixed: (node, attr) => attr.highlighted, // Only fix during active drag
+        getNodeMass: (node, attr) => {
+          // Increase mass for recently dragged nodes to reduce force influence
+          if (attr.draggedRecently && !attr.highlighted) {
+            return 10; // Higher mass = less affected by forces
           }
-        },
-        
-        kill: () => {
-          isRunningRef.current=(false);
-          if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-          }
+          return 1; // Normal mass
         }
-      };
+      });
 
-      layoutRef.current = layoutInstance;
+      console.log("Layout created successfully");
+      layoutRef.current = layout;
       rendererRef.current = renderer;
-      
     } catch (error) {
       console.error("Error creating layout:", error);
       rendererRef.current = renderer;
@@ -723,24 +630,23 @@ const GraphVisualization = forwardRef(({
           console.warn("Error cleaning up renderer:", error);
         }
       }
-      isRunningRef.current=(false);
+      setIsLayoutRunning(false);
       dragStateRef.current = { isDragging: false, draggedNode: null };
     };
-  }, [data, threshold, communityDetection, numCommunities]);
+  }, [data, threshold, communityDetection]);
 
-  const onsaveNetworkAsPNG = useCallback(() => {
-    if (rendererRef.current) {
+  const onsaveNetworkAsPNG = useCallback(()=>{
+    if (rendererRef.current)
       downloadAsImage(rendererRef.current, {
-        layers: ["edges", "nodes", "edgeLabels", "labels"],
-        format: "png",
-        fileName: "network-export",
-        backgroundColor: "#ffffff",
-        width: 1200,
-        height: 800,
-        cameraState: undefined,
-      });
-    }
-  }, [rendererRef]);
+      layers: ["edges", "nodes", "edgeLabels", "labels"], // Choose what to include
+      format: "png",                                       // or "jpeg"
+      fileName: "network-export",
+      backgroundColor: "#ffffff",
+      width: 1200,   // optional custom width
+      height: 800,   // optional custom height
+      cameraState: undefined, // use current or a reset state if needed
+    });
+  },[rendererRef])
 
   if (!data?.nodes?.length) {
     return (
@@ -865,20 +771,20 @@ const GraphVisualization = forwardRef(({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={startLayout}
-            disabled={isRunningRef.current}
+            disabled={isLayoutRunning}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400"
           >
-            {isRunningRef.current ? "Layout Running..." : "Start Layout"}
+            {isLayoutRunning ? "Layout Running..." : "Start Layout"}
           </button>
           <button
             onClick={stopLayout}
-            disabled={!isRunningRef.current}
+            disabled={!isLayoutRunning}
             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400"
           >
             Stop Layout
           </button>
 
-          <Button
+           <Button
             onClick={onsaveNetworkAsPNG}
             className="px-4 py-2"
           >
@@ -923,11 +829,11 @@ const GraphVisualization = forwardRef(({
       </div>
 
       {/* Legend for Community Detection */}
-      {communityDetection && (
+      {communityDetection && data.communities && (
         <div className="bg-white p-4 rounded-lg shadow mt-4">
           <h3 className="text-lg font-semibold mb-2">Community Legend</h3>
           <div className="flex flex-wrap gap-2">
-            {Array.from({length: numCommunities}, (_, i) => i).map(communityId => (
+            {Array.from(new Set(data.nodes.map(n => n.community))).map(communityId => (
               <div key={communityId} className="flex items-center">
                 <div 
                   className="w-4 h-4 rounded-full mr-2"
