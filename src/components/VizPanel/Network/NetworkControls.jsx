@@ -6,6 +6,7 @@ export const defaultParameter = {
     metadataVariable: "artists",
     maxNodes: 100,
     communityDetection: false,
+    numCommunities: 4, // Add default number of communities
   };
 export default function NetworkControls({
   parameters = {
@@ -13,6 +14,7 @@ export default function NetworkControls({
     metadataVariable: "artists",
     maxNodes: 100,
     communityDetection: false,
+    numCommunities: 4,
   },
   onParameterChange,
   onRefresh,
@@ -24,6 +26,8 @@ export default function NetworkControls({
   const [localMaxNodes, setLocalMaxNodes] = useState(parameters.maxNodes);
   const [localCommunityDetection, setLocalCommunityDetection] = useState(parameters.communityDetection);
   const [localMetadataVariable, setLocalMetadataVariable] = useState(parameters.metadataVariable);
+  const [localNumCommunities, setLocalNumCommunities] = useState(parameters.numCommunities);
+  const [isLayoutRunning, setIsLayoutRunning] = useState(false);
 
   // Update local state when parameters change
   useEffect(() => {
@@ -31,7 +35,26 @@ export default function NetworkControls({
     setLocalMaxNodes(parameters.maxNodes);
     setLocalCommunityDetection(parameters.communityDetection);
     setLocalMetadataVariable(parameters.metadataVariable);
+    setLocalNumCommunities(parameters.numCommunities);
   }, [parameters]);
+
+  // Listen for layout state changes from graphRef
+  useEffect(() => {
+    if (graphRef?.current) {
+      // Create a simple way to track layout state
+      const checkLayoutState = () => {
+        if (graphRef.current?.isLayoutRunning !== undefined) {
+          setIsLayoutRunning(graphRef.current.isLayoutRunning);
+        }
+      };
+      
+      // Check initially and set up interval
+      checkLayoutState();
+      const interval = setInterval(checkLayoutState, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [graphRef]);
 
   const handleParameterUpdate = () => {
     if (onParameterChange) {
@@ -40,6 +63,7 @@ export default function NetworkControls({
         maxNodes: localMaxNodes,
         communityDetection: localCommunityDetection,
         metadataVariable: localMetadataVariable,
+        numCommunities: localNumCommunities,
       });
     }
   };
@@ -47,12 +71,14 @@ export default function NetworkControls({
   const handleStartLayout = () => {
     if (graphRef?.current?.startLayout) {
       graphRef.current.startLayout();
+      setIsLayoutRunning(true);
     }
   };
 
   const handleStopLayout = () => {
     if (graphRef?.current?.stopLayout) {
       graphRef.current.stopLayout();
+      setIsLayoutRunning(false);
     }
   };
 
@@ -61,7 +87,8 @@ export default function NetworkControls({
       localThreshold !== parameters.threshold ||
       localMaxNodes !== parameters.maxNodes ||
       localCommunityDetection !== parameters.communityDetection ||
-      localMetadataVariable !== parameters.metadataVariable
+      localMetadataVariable !== parameters.metadataVariable ||
+      localNumCommunities !== parameters.numCommunities
     );
   };
 
@@ -94,7 +121,7 @@ export default function NetworkControls({
       </div>
 
       {/* Control Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Metadata Variable Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -111,28 +138,6 @@ export default function NetworkControls({
           </select>
           <p className="text-xs text-gray-500 mt-1">
             Type of entities to connect
-          </p>
-        </div>
-
-        {/* Threshold Control */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Edge Threshold: {localThreshold}
-          </label>
-          <input
-            type="range"
-            min="1"
-            max="10"
-            value={localThreshold}
-            onChange={(e) => setLocalThreshold(parseInt(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-          />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>1</span>
-            <span>10</span>
-          </div>
-          <p className="text-xs text-gray-500">
-            Minimum connection strength
           </p>
         </div>
 
@@ -159,6 +164,30 @@ export default function NetworkControls({
           </p>
         </div>
 
+        {/* Threshold Control */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Edge Threshold: {localThreshold}
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={localThreshold}
+            onChange={(e) => setLocalThreshold(parseInt(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>1</span>
+            <span>10</span>
+          </div>
+          <p className="text-xs text-gray-500">
+            Minimum connection strength
+          </p>
+        </div>
+
+        
+
         {/* Community Detection Toggle */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -182,6 +211,30 @@ export default function NetworkControls({
             Group nodes by community
           </p>
         </div>
+
+        {/* Number of Communities Control - Only show when community detection is enabled */}
+        {localCommunityDetection && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Number of Communities: {localNumCommunities}
+            </label>
+            <input
+              type="range"
+              min="2"
+              max="10"
+              value={localNumCommunities}
+              onChange={(e) => setLocalNumCommunities(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>2</span>
+              <span>10</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Target number of communities
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
@@ -204,6 +257,7 @@ export default function NetworkControls({
               setLocalMaxNodes(parameters.maxNodes);
               setLocalCommunityDetection(parameters.communityDetection);
               setLocalMetadataVariable(parameters.metadataVariable);
+              setLocalNumCommunities(parameters.numCommunities);
             }}
             className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 flex items-center space-x-2"
           >
@@ -241,17 +295,6 @@ export default function NetworkControls({
             </button>
           </>
         )}
-      </div>
-
-      {/* Parameter Summary */}
-      <div className="bg-gray-50 p-3 rounded-md">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Current Configuration</h4>
-        <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-          <div><span className="font-medium">Type:</span> {parameters.metadataVariable}</div>
-          <div><span className="font-medium">Threshold:</span> {parameters.threshold}</div>
-          <div><span className="font-medium">Max Nodes:</span> {parameters.maxNodes}</div>
-          <div><span className="font-medium">Communities:</span> {parameters.communityDetection ? "Yes" : "No"}</div>
-        </div>
       </div>
     </div>
   );

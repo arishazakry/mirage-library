@@ -6,18 +6,13 @@ import NetworkControls, { defaultParameter } from "./NetworkControls";
 import { emptyGraph } from ".";
 import { diffObjects } from "@/lib/utils";
 
-const defaultParameters = {
-  threshold: 1,
-  metadataVariable: "artists",
-  maxNodes: 100,
-  communityDetection: false,
-};
+
 
 export default function NetworkVisualizationContainer({ 
   data=emptyGraph,
   fetchNetworkData=()=>{},
 }) {
-  const [parameters, setParameters] = useState(defaultParameters);
+  const [parameters, setParameters] = useState(defaultParameter);
   // const [layoutKey, setLayoutKey] = useState(0); // Force re-render key
   const containerRef = useRef(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -85,6 +80,7 @@ export default function NetworkVisualizationContainer({
           threshold={parameters.threshold}
           communityDetection={parameters.communityDetection}
           containerSize={containerSize} // Pass container size if component supports it
+          numCommunities={parameters.numCommunities}
           // onLayoutStart={handleLayoutStart}
           // onLayoutStop={handleLayoutStop}
         />

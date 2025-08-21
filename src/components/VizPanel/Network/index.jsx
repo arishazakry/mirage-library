@@ -9,6 +9,7 @@ import { debounce } from "lodash";
 import { Button } from "@/components/ui/button";
 import louvain from "graphology-communities-louvain";
 import forceAtlas2 from "graphology-layout-forceatlas2";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const emptyGraph = {
   nodes: [],
@@ -16,60 +17,68 @@ export const emptyGraph = {
 };
 
 // Community color scheme
-const communityColors = scaleOrdinal(schemeCategory10);
+const communityc = scaleOrdinal(schemeCategory10);
+const communityColors = (communityId)=>{
+   if (communityId === -1) {
+      // "Other" category - use gray color
+      return "#999";
+    } else {
+      // Regular community - use color from scheme
+      return communityc(communityId);
+    }
+}
 
 // Function to perform community detection with specified number of communities
 const detectCommunities = (graph, numCommunities) => {
   // First, run the standard Louvain algorithm
   const communities = louvain(graph);
-  
-  // If we already have the desired number of communities, return
+  debugger
+  // Get all unique communities
   const uniqueCommunities = new Set(Object.values(communities));
+  
+  // If we already have the desired number of communities or fewer, return
   if (uniqueCommunities.size <= numCommunities) {
     return communities;
   }
   
-  // If we need to reduce the number of communities, we'll merge the smallest ones
+  // Calculate community sizes
   const communitySizes = {};
   Object.values(communities).forEach(community => {
     communitySizes[community] = (communitySizes[community] || 0) + 1;
   });
   
-  // Sort communities by size (ascending)
+  // Sort communities by size (descending) to keep the largest ones
   const sortedCommunities = Object.entries(communitySizes)
-    .sort((a, b) => a[1] - b[1])
+    .sort((a, b) => b[1] - a[1])
     .map(([community]) => parseInt(community));
   
-  // Create a mapping to merge smallest communities into larger ones
-  const communityMapping = {};
-  let targetCommunityIndex = sortedCommunities.length - 1;
+  // Keep the top (numCommunities - 1) communities and group the rest as "Other"
+  const otherCommunities = sortedCommunities.slice(numCommunities);
   
-  // Merge smallest communities until we reach the desired number
-  for (let i = 0; i < sortedCommunities.length - numCommunities; i++) {
-    const smallCommunity = sortedCommunities[i];
-    const targetCommunity = sortedCommunities[targetCommunityIndex];
-    
-    // Map the small community to the target community
-    communityMapping[smallCommunity] = targetCommunity;
-    
-    // Move to next target community (cycling through the largest ones)
-    targetCommunityIndex = (targetCommunityIndex - 1) % sortedCommunities.length;
-    if (targetCommunityIndex < sortedCommunities.length - numCommunities) {
-      targetCommunityIndex = sortedCommunities.length - 1;
-    }
-  }
+  // Create mapping for other communities
+  const communityMapping = {};
+  otherCommunities.forEach(community => {
+    communityMapping[community] = -1; // -1 represents "Other"
+  });
+
+  // update communitySizes
+  communitySizes[-1]=0;
+  otherCommunities.forEach(d=>{
+    communitySizes[-1]+=communitySizes[d];
+    delete communitySizes[d];
+  })
   
   // Apply the mapping to create the final communities
   const finalCommunities = {};
   graph.forEachNode(node => {
     let community = communities[node];
-    while (communityMapping[community]) {
-      community = communityMapping[community];
+    if (communityMapping[community] !== undefined) {
+      community = communityMapping[community]; // Map to "Other"
     }
     finalCommunities[node] = community;
   });
   
-  return finalCommunities;
+  return {communitySizes,communities:finalCommunities};
 };
 
 const GraphVisualization = forwardRef(({ 
@@ -84,7 +93,8 @@ const GraphVisualization = forwardRef(({
   const rendererRef = useRef(null);
   const layoutRef = useRef(null);
   const isRunningRef = useRef(false);
-  // const [isLayoutRunning, setIsLayoutRunning] = useState(false);
+  const [isLayoutRunning, setIsLayoutRunning] = useState(false);
+  const [communitySizes, setCommunitySizes] = useState({});
   const [networkStats, setNetworkStats] = useState({});
   
   // Drag and drop state with force modulation
@@ -99,6 +109,7 @@ const GraphVisualization = forwardRef(({
     if (layoutRef.current && !isRunningRef.current) {
       try {
         isRunningRef.current = true;
+        setIsLayoutRunning(true);
         onLayoutStart?.();
         console.log("Layout started successfully");
         
@@ -108,6 +119,7 @@ const GraphVisualization = forwardRef(({
       } catch (error) {
         console.error("Error starting layout:", error);
         isRunningRef.current = false;
+        setIsLayoutRunning(false);
       }
     }
   }, [ onLayoutStart, onLayoutStop]);
@@ -117,6 +129,7 @@ const GraphVisualization = forwardRef(({
       try {
         layoutRef.current.stop();
         isRunningRef.current=false;
+        setIsLayoutRunning(false);
         onLayoutStop?.();
         console.log("Layout stopped successfully");
       } catch (error) {
@@ -126,174 +139,182 @@ const GraphVisualization = forwardRef(({
   }, [onLayoutStop]);
 
   // Calculate network metrics using built-in graphology methods
-  const calculateNetworkMetrics = (graph) => {
-    const basicStats = {
-      nodes: graph.order,
-      edges: graph.size,
-      density: graph.order > 1 ? (2 * graph.size) / (graph.order * (graph.order - 1)) : 0,
-      avgDegree: graph.order > 0 ? (2 * graph.size) / graph.order : 0,
-    };
+  // Calculate network metrics using built-in graphology methods
+const calculateNetworkMetrics = (graph) => {
+  const basicStats = {
+    nodes: graph.order,
+    edges: graph.size,
+    density: graph.order > 1 ? (2 * graph.size) / (graph.order * (graph.order - 1)) : 0,
+    avgDegree: graph.order > 0 ? (2 * graph.size) / graph.order : 0,
+  };
 
-    // Degree distribution using built-in methods
-    const degrees = [];
-    const degreeMap = {};
-    graph.forEachNode((node) => {
-      const degree = graph.degree(node);
-      degrees.push(degree);
-      degreeMap[degree] = (degreeMap[degree] || 0) + 1;
-    });
+  // Degree distribution using built-in methods
+  const degrees = [];
+  const degreeMap = {};
+  graph.forEachNode((node) => {
+    const degree = graph.degree(node);
+    degrees.push(degree);
+    degreeMap[degree] = (degreeMap[degree] || 0) + 1;
+  });
 
-    const maxDegree = Math.max(...degrees);
-    const minDegree = Math.min(...degrees);
+  const maxDegree = Math.max(...degrees);
+  const minDegree = Math.min(...degrees);
 
-    // Community stats
-    const communities = communityDetection ? new Set(data.nodes.map(n => n.community)).size : 0;
-    
-    // Calculate modularity manually if community detection is enabled
-    let modularityScore = 0;
-    if (communityDetection && communities > 1 && graph.size > 0) {
-      const m = graph.size;
-      let modularity = 0;
-      
-      graph.forEachNode((i) => {
-        const communityI = graph.getNodeAttribute(i, 'community');
-        if (communityI === undefined) return;
-        
-        graph.forEachNode((j) => {
-          const communityJ = graph.getNodeAttribute(j, 'community');
-          if (communityJ === undefined) return;
-          
-          const aij = graph.hasEdge(i, j) ? 1 : 0;
-          const ki = graph.degree(i);
-          const kj = graph.degree(j);
-          const delta = communityI === communityJ ? 1 : 0;
-          
-          modularity += (aij - (ki * kj) / (2 * m)) * delta;
-        });
-      });
-      
-      modularityScore = modularity / (2 * m);
+  // Community stats - get communities from graph attributes instead of original data
+  const communities = new Set();
+  graph.forEachNode((node) => {
+    const community = graph.getNodeAttribute(node, 'community');
+    if (community !== undefined) {
+      communities.add(community);
     }
+  });
+  const communityCount = communities.size;
+  
+  // Calculate modularity manually if community detection is enabled
+  let modularityScore = 0;
+  if (communityCount > 1 && graph.size > 0) {
+    const m = graph.size;
+    let modularity = 0;
     
-    // Simple clustering coefficient calculation
-    let totalClusteringCoeff = 0;
-    let validNodes = 0;
+    graph.forEachNode((i) => {
+      const communityI = graph.getNodeAttribute(i, 'community');
+      if (communityI === undefined) return;
+      
+      graph.forEachNode((j) => {
+        const communityJ = graph.getNodeAttribute(j, 'community');
+        if (communityJ === undefined) return;
+        
+        const aij = graph.hasEdge(i, j) ? 1 : 0;
+        const ki = graph.degree(i);
+        const kj = graph.degree(j);
+        const delta = communityI === communityJ ? 1 : 0;
+        
+        modularity += (aij - (ki * kj) / (2 * m)) * delta;
+      });
+    });
     
-    graph.forEachNode((node) => {
-      const neighbors = graph.neighbors(node);
-      const degree = neighbors.length;
-      
-      if (degree < 2) return; // No clustering possible with less than 2 neighbors
-      
-      let triangles = 0;
-      for (let i = 0; i < neighbors.length; i++) {
-        for (let j = i + 1; j < neighbors.length; j++) {
-          if (graph.hasEdge(neighbors[i], neighbors[j])) {
-            triangles++;
-          }
+    modularityScore = modularity / (2 * m);
+  }
+  
+  // Simple clustering coefficient calculation
+  let totalClusteringCoeff = 0;
+  let validNodes = 0;
+  
+  graph.forEachNode((node) => {
+    const neighbors = graph.neighbors(node);
+    const degree = neighbors.length;
+    
+    if (degree < 2) return; // No clustering possible with less than 2 neighbors
+    
+    let triangles = 0;
+    for (let i = 0; i < neighbors.length; i++) {
+      for (let j = i + 1; j < neighbors.length; j++) {
+        if (graph.hasEdge(neighbors[i], neighbors[j])) {
+          triangles++;
         }
       }
-      
-      const possibleTriangles = (degree * (degree - 1)) / 2;
-      const clusteringCoeff = possibleTriangles > 0 ? triangles / possibleTriangles : 0;
-      totalClusteringCoeff += clusteringCoeff;
-      validNodes++;
-    });
-
-    const avgClusteringCoeff = validNodes > 0 ? totalClusteringCoeff / validNodes : 0;
-
-    // Connected components using graph traversal
-    const visited = new Set();
-    const components = [];
+    }
     
-    graph.forEachNode((startNode) => {
-      if (visited.has(startNode)) return;
+    const possibleTriangles = (degree * (degree - 1)) / 2;
+    const clusteringCoeff = possibleTriangles > 0 ? triangles / possibleTriangles : 0;
+    totalClusteringCoeff += clusteringCoeff;
+    validNodes++;
+  });
+
+  const avgClusteringCoeff = validNodes > 0 ? totalClusteringCoeff / validNodes : 0;
+
+  // Connected components using graph traversal
+  const visited = new Set();
+  const components = [];
+  
+  graph.forEachNode((startNode) => {
+    if (visited.has(startNode)) return;
+    
+    const component = [];
+    const queue = [startNode];
+    
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (visited.has(node)) continue;
       
-      const component = [];
-      const queue = [startNode];
+      visited.add(node);
+      component.push(node);
       
-      while (queue.length > 0) {
-        const node = queue.shift();
-        if (visited.has(node)) continue;
-        
-        visited.add(node);
-        component.push(node);
-        
-        graph.forEachNeighbor(node, (neighbor) => {
-          if (!visited.has(neighbor)) {
-            queue.push(neighbor);
-          }
-        });
-      }
-      
-      components.push(component);
+      graph.forEachNeighbor(node, (neighbor) => {
+        if (!visited.has(neighbor)) {
+          queue.push(neighbor);
+        }
+      });
+    }
+    
+    components.push(component);
+  });
+
+  const largestComponent = components.length > 0 ? Math.max(...components.map(comp => comp.length)) : 0;
+
+  // Edge weight statistics
+  const weights = [];
+  graph.forEachEdge((edge, attributes) => {
+    if (attributes.weight) weights.push(parseFloat(attributes.weight));
+  });
+
+  const weightExtent = weights.length > 0 ? [Math.min(...weights), Math.max(...weights)] : [0, 0];
+  const avgWeight = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0;
+
+  // Assortativity (degree correlation)
+  let assortativity = 0;
+  if (graph.size > 0) {
+    const edges = [];
+    graph.forEachEdge((edge, attributes, source, target) => {
+      edges.push([graph.degree(source), graph.degree(target)]);
     });
-
-    const largestComponent = components.length > 0 ? Math.max(...components.map(comp => comp.length)) : 0;
-
-    // Edge weight statistics
-    const weights = [];
-    graph.forEachEdge((edge, attributes) => {
-      if (attributes.weight) weights.push(parseFloat(attributes.weight));
-    });
-
-    const weightExtent = weights.length > 0 ? [Math.min(...weights), Math.max(...weights)] : [0, 0];
-    const avgWeight = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0;
-
-    // Assortativity (degree correlation)
-    let assortativity = 0;
-    if (graph.size > 0) {
-      const edges = [];
-      graph.forEachEdge((edge, attributes, source, target) => {
-        edges.push([graph.degree(source), graph.degree(target)]);
+    
+    if (edges.length > 0) {
+      const meanX = edges.reduce((sum, [x]) => sum + x, 0) / edges.length;
+      const meanY = edges.reduce((sum, [, y]) => sum + y, 0) / edges.length;
+      
+      let numerator = 0;
+      let denomX = 0;
+      let denomY = 0;
+      
+      edges.forEach(([x, y]) => {
+        const dx = x - meanX;
+        const dy = y - meanY;
+        numerator += dx * dy;
+        denomX += dx * dx;
+        denomY += dy * dy;
       });
       
-      if (edges.length > 0) {
-        const meanX = edges.reduce((sum, [x]) => sum + x, 0) / edges.length;
-        const meanY = edges.reduce((sum, [, y]) => sum + y, 0) / edges.length;
-        
-        let numerator = 0;
-        let denomX = 0;
-        let denomY = 0;
-        
-        edges.forEach(([x, y]) => {
-          const dx = x - meanX;
-          const dy = y - meanY;
-          numerator += dx * dy;
-          denomX += dx * dx;
-          denomY += dy * dy;
-        });
-        
-        const denominator = Math.sqrt(denomX * denomY);
-        assortativity = denominator > 0 ? numerator / denominator : 0;
-      }
+      const denominator = Math.sqrt(denomX * denomY);
+      assortativity = denominator > 0 ? numerator / denominator : 0;
     }
+  }
 
-    // Calculate edge crossings
-    const crossingData = calculateEdgeCrossings(graph);
+  // Calculate edge crossings
+  const crossingData = calculateEdgeCrossings(graph);
 
-    return {
-      ...basicStats,
-      communities,
-      modularity: modularityScore.toFixed(4),
-      connectedComponents: components.length,
-      largestComponent,
-      componentRatio: graph.order > 0 ? (largestComponent / graph.order).toFixed(3) : '0.000',
-      weightExtent,
-      avgWeight: avgWeight.toFixed(2),
-      maxDegree,
-      minDegree,
-      avgClusteringCoeff: avgClusteringCoeff.toFixed(4),
-      assortativity: assortativity.toFixed(4),
-      degreeDistribution: degreeMap,
-      // Graph diameter (approximate - using BFS from random node)
-      estimatedDiameter: estimateDiameter(graph),
-      // Edge crossing analysis
-      edgeCrossings: crossingData.crossings,
-      crossingDensity: crossingData.crossingDensity.toFixed(4),
-      crossingPairs: crossingData.crossingPairs,
-    };
+  return {
+    ...basicStats,
+    communities: communityCount,
+    modularity: modularityScore.toFixed(4),
+    connectedComponents: components.length,
+    largestComponent,
+    componentRatio: graph.order > 0 ? (largestComponent / graph.order).toFixed(3) : '0.000',
+    weightExtent,
+    avgWeight: avgWeight.toFixed(2),
+    maxDegree,
+    minDegree,
+    avgClusteringCoeff: avgClusteringCoeff.toFixed(4),
+    assortativity: assortativity.toFixed(4),
+    degreeDistribution: degreeMap,
+    // Graph diameter (approximate - using BFS from random node)
+    estimatedDiameter: estimateDiameter(graph),
+    // Edge crossing analysis
+    edgeCrossings: crossingData.crossings,
+    crossingDensity: crossingData.crossingDensity.toFixed(4),
+    crossingPairs: crossingData.crossingPairs,
   };
+};
 
   // Helper function to check if two line segments intersect
   const doLinesIntersect = (p1, q1, p2, q2) => {
@@ -480,17 +501,20 @@ const GraphVisualization = forwardRef(({
     if (communityDetection && graph.order > 0) {
       try {
         console.log("Performing community detection for", numCommunities, "communities");
-        const communities = detectCommunities(graph, numCommunities);
-        
+        const {communitySizes,communities} = detectCommunities(graph, numCommunities);
+        setCommunitySizes(communitySizes);
         // Apply community colors to nodes
         graph.forEachNode((node) => {
           const communityId = communities[node];
-          const nodeColor = communityColors(communityId);
+          let nodeColor;
+          nodeColor = communityColors(communityId);   
           graph.setNodeAttribute(node, "color", nodeColor);
           graph.setNodeAttribute(node, "community", communityId);
         });
         
-        console.log("Community detection completed with", new Set(Object.values(communities)).size, "communities");
+        const detectedCommunities = new Set(Object.values(communities));
+        console.log("Community detection completed with", detectedCommunities.size, "communities");
+        
       } catch (error) {
         console.error("Error in community detection:", error);
         // Fallback: assign random communities
@@ -705,9 +729,8 @@ const GraphVisualization = forwardRef(({
       console.error("Error creating layout:", error);
       rendererRef.current = renderer;
     }
-
+    startLayout();
     return () => {
-      console.log("Cleaning up graph visualization");
       if (layoutRef.current) {
         try {
           layoutRef.current.stop();
@@ -755,108 +778,104 @@ const GraphVisualization = forwardRef(({
       {/* Enhanced Network Statistics */}
       <div className="bg-background p-4 rounded-lg shadow mb-4">
         <h3 className="text-lg font-semibold mb-3">Network Statistics</h3>
-        
-        {/* Basic Stats */}
-        <div className="mb-4">
-          <h4 className="text-md font-medium mb-2 text-blue-600">Basic Metrics</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-sm">
-            <div className="bg-blue-50 p-2 rounded">
-              <span className="font-medium block">Nodes:</span> 
-              <span className="text-lg">{networkStats.nodes}</span>
-            </div>
-            <div className="bg-green-50 p-2 rounded">
-              <span className="font-medium block">Edges:</span> 
-              <span className="text-lg">{networkStats.edges}</span>
-            </div>
-            <div className="bg-purple-50 p-2 rounded">
-              <span className="font-medium block">Density:</span> 
-              <span className="text-lg">{(networkStats.density || 0).toFixed(3)}</span>
-            </div>
-            <div className="bg-orange-50 p-2 rounded">
-              <span className="font-medium block">Avg Degree:</span> 
-              <span className="text-lg">{(networkStats.avgDegree || 0).toFixed(1)}</span>
-            </div>
-            <div className="bg-red-50 p-2 rounded">
-              <span className="font-medium block">Components:</span> 
-              <span className="text-lg">{networkStats.connectedComponents}</span>
-            </div>
-            <div className="bg-yellow-50 p-2 rounded">
-              <span className="font-medium block">Largest Comp:</span> 
-              <span className="text-lg">{networkStats.largestComponent}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Community Detection Stats */}
-        {communityDetection && (
-          <div className="mb-4">
-            <h4 className="text-md font-medium mb-2 text-green-600">Community Structure</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-              <div className="bg-green-50 p-2 rounded">
+        <Accordion type="single" collapsible>
+          {/* Basic Stats */}
+          <AccordionItem value="item-1">
+            <AccordionTrigger className="text-md font-medium mb-2">Basic Metrics</AccordionTrigger>
+            <AccordionContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-sm">
+                  <div className="bg-primary-foreground p-2 rounded">
+                    <span className="font-medium block">Nodes:</span> 
+                    <span className="text-lg">{networkStats.nodes}</span>
+                  </div>
+                  <div className="bg-primary-foreground p-2 rounded">
+                    <span className="font-medium block">Edges:</span> 
+                    <span className="text-lg">{networkStats.edges}</span>
+                  </div>
+                  <div className="bg-primary-foreground p-2 rounded">
+                    <span className="font-medium block">Density:</span> 
+                    <span className="text-lg">{(networkStats.density || 0).toFixed(3)}</span>
+                  </div>
+                  <div className="bg-primary-foreground p-2 rounded">
+                    <span className="font-medium block">Avg Degree:</span> 
+                    <span className="text-lg">{(networkStats.avgDegree || 0).toFixed(1)}</span>
+                  </div>
+                  <div className="bg-primary-foreground p-2 rounded">
+                    <span className="font-medium block">Components:</span> 
+                    <span className="text-lg">{networkStats.connectedComponents}</span>
+                  </div>
+                  <div className="bg-primary-foreground p-2 rounded">
+                    <span className="font-medium block">Largest Comp:</span> 
+                    <span className="text-lg">{networkStats.largestComponent}</span>
+                  </div>
+            </AccordionContent>
+          </AccordionItem>
+          {/* Community Detection Stats */}
+          {communityDetection &&<AccordionItem value="item-2">
+            <AccordionTrigger className="text-md font-medium mb-2">Community Structure</AccordionTrigger>
+            <AccordionContent className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+              <div className="bg-primary-foreground p-2 rounded">
                 <span className="font-medium block">Communities:</span> 
                 <span className="text-lg">{networkStats.communities}</span>
               </div>
-              <div className="bg-green-50 p-2 rounded">
+              <div className="bg-primary-foreground p-2 rounded">
                 <span className="font-medium block">Modularity:</span> 
                 <span className="text-lg">{networkStats.modularity}</span>
               </div>
-              <div className="bg-green-50 p-2 rounded">
+              <div className="bg-primary-foreground p-2 rounded">
                 <span className="font-medium block">Component Ratio:</span> 
                 <span className="text-lg">{networkStats.componentRatio}</span>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Network Structure Metrics */}
-        <div className="mb-4">
-          <h4 className="text-md font-medium mb-2 text-purple-600">Network Structure</h4>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
-            <div className="bg-purple-50 p-2 rounded">
-              <span className="font-medium block">Clustering Coeff:</span> 
-              <span className="text-lg">{networkStats.avgClusteringCoeff}</span>
-            </div>
-            <div className="bg-purple-50 p-2 rounded">
-              <span className="font-medium block">Assortativity:</span> 
-              <span className="text-lg">{networkStats.assortativity}</span>
-            </div>
-            <div className="bg-purple-50 p-2 rounded">
-              <span className="font-medium block">Est. Diameter:</span> 
-              <span className="text-lg">{networkStats.estimatedDiameter}</span>
-            </div>
-            <div className="bg-purple-50 p-2 rounded">
-              <span className="font-medium block">Edge Crossings:</span> 
-              <span className="text-lg">{networkStats.edgeCrossings}</span>
-            </div>
-            <div className="bg-purple-50 p-2 rounded">
-              <span className="font-medium block">Crossing Density:</span> 
-              <span className="text-lg">{networkStats.crossingDensity}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Edge Weight Statistics */}
-        <div>
-          <h4 className="text-md font-medium mb-2 text-orange-600">Edge Statistics</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <div className="bg-orange-50 p-2 rounded">
-              <span className="font-medium block">Min Weight:</span> 
-              <span className="text-lg">{networkStats.weightExtent?.[0] ?? 0}</span>
-            </div>
-            <div className="bg-orange-50 p-2 rounded">
-              <span className="font-medium block">Max Weight:</span> 
-              <span className="text-lg">{networkStats.weightExtent?.[1] ?? 0}</span>
-            </div>
-            <div className="bg-orange-50 p-2 rounded">
-              <span className="font-medium block">Avg Weight:</span> 
-              <span className="text-lg">{networkStats.avgWeight}</span>
-            </div>
-            <div className="bg-orange-50 p-2 rounded">
-              <span className="font-medium block">Degree Range:</span> 
-              <span className="text-lg">{networkStats.minDegree}-{networkStats.maxDegree}</span>
-            </div>
-          </div>
-        </div>
+            </AccordionContent>
+          </AccordionItem>}
+           {/* Network Structure Metrics */}
+          <AccordionItem value="item-3">
+            <AccordionTrigger className="text-md font-medium mb-2">Network Structure</AccordionTrigger>
+            <AccordionContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
+              <div className="bg-primary-foreground p-2 rounded">
+                <span className="font-medium block">Clustering Coeff:</span> 
+                <span className="text-lg">{networkStats.avgClusteringCoeff}</span>
+              </div>
+              <div className="bg-primary-foreground p-2 rounded">
+                <span className="font-medium block">Assortativity:</span> 
+                <span className="text-lg">{networkStats.assortativity}</span>
+              </div>
+              <div className="bg-primary-foreground p-2 rounded">
+                <span className="font-medium block">Est. Diameter:</span> 
+                <span className="text-lg">{networkStats.estimatedDiameter}</span>
+              </div>
+              <div className="bg-primary-foreground p-2 rounded">
+                <span className="font-medium block">Edge Crossings:</span> 
+                <span className="text-lg">{networkStats.edgeCrossings}</span>
+              </div>
+              <div className="bg-primary-foreground p-2 rounded">
+                <span className="font-medium block">Crossing Density:</span> 
+                <span className="text-lg">{networkStats.crossingDensity}</span>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          {/* Edge Weight Statistics */}
+          <AccordionItem value="item-4">
+            <AccordionTrigger className="text-md font-medium mb-2">Network Structure</AccordionTrigger>
+            <AccordionContent className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div className="bg-primary-foreground p-2 rounded">
+                <span className="font-medium block">Min Weight:</span> 
+                <span className="text-lg">{networkStats.weightExtent?.[0] ?? 0}</span>
+              </div>
+              <div className="bg-primary-foreground p-2 rounded">
+                <span className="font-medium block">Max Weight:</span> 
+                <span className="text-lg">{networkStats.weightExtent?.[1] ?? 0}</span>
+              </div>
+              <div className="bg-primary-foreground p-2 rounded">
+                <span className="font-medium block">Avg Weight:</span> 
+                <span className="text-lg">{networkStats.avgWeight}</span>
+              </div>
+              <div className="bg-primary-foreground p-2 rounded">
+                <span className="font-medium block">Degree Range:</span> 
+                <span className="text-lg">{networkStats.minDegree}-{networkStats.maxDegree}</span>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
 
       {/* Layout Controls */}
@@ -927,13 +946,14 @@ const GraphVisualization = forwardRef(({
         <div className="bg-white p-4 rounded-lg shadow mt-4">
           <h3 className="text-lg font-semibold mb-2">Community Legend</h3>
           <div className="flex flex-wrap gap-2">
-            {Array.from({length: numCommunities}, (_, i) => i).map(communityId => (
+            {/* Regular communities */}
+            {Object.entries(communitySizes).map(([communityId,size]) => (
               <div key={communityId} className="flex items-center">
                 <div 
                   className="w-4 h-4 rounded-full mr-2"
-                  style={{ backgroundColor: communityColors(communityId) }}
+                  style={{ backgroundColor: communityColors(+communityId) }}
                 />
-                <span className="text-sm">Community {communityId}</span>
+                <span className="text-sm">{communityId!=-1?`Community ${+communityId+1}`:"Other"}</span>
               </div>
             ))}
           </div>
