@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import louvain from "graphology-communities-louvain";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const emptyGraph = {
   nodes: [],
@@ -138,183 +139,282 @@ const GraphVisualization = forwardRef(({
     }
   }, [onLayoutStop]);
 
-  // Calculate network metrics using built-in graphology methods
-  // Calculate network metrics using built-in graphology methods
-const calculateNetworkMetrics = (graph) => {
-  const basicStats = {
-    nodes: graph.order,
-    edges: graph.size,
-    density: graph.order > 1 ? (2 * graph.size) / (graph.order * (graph.order - 1)) : 0,
-    avgDegree: graph.order > 0 ? (2 * graph.size) / graph.order : 0,
-  };
 
-  // Degree distribution using built-in methods
-  const degrees = [];
-  const degreeMap = {};
-  graph.forEachNode((node) => {
-    const degree = graph.degree(node);
-    degrees.push(degree);
-    degreeMap[degree] = (degreeMap[degree] || 0) + 1;
-  });
+  const calculateNetworkMetrics = (graph) => {
+    const basicStats = {
+      nodes: graph.order,
+      edges: graph.size,
+      density: graph.order > 1 ? (2 * graph.size) / (graph.order * (graph.order - 1)) : 0,
+      avgDegree: graph.order > 0 ? (2 * graph.size) / graph.order : 0,
+    };
 
-  const maxDegree = Math.max(...degrees);
-  const minDegree = Math.min(...degrees);
-
-  // Community stats - get communities from graph attributes instead of original data
-  const communities = new Set();
-  graph.forEachNode((node) => {
-    const community = graph.getNodeAttribute(node, 'community');
-    if (community !== undefined) {
-      communities.add(community);
-    }
-  });
-  const communityCount = communities.size;
-  
-  // Calculate modularity manually if community detection is enabled
-  let modularityScore = 0;
-  if (communityCount > 1 && graph.size > 0) {
-    const m = graph.size;
-    let modularity = 0;
-    
-    graph.forEachNode((i) => {
-      const communityI = graph.getNodeAttribute(i, 'community');
-      if (communityI === undefined) return;
-      
-      graph.forEachNode((j) => {
-        const communityJ = graph.getNodeAttribute(j, 'community');
-        if (communityJ === undefined) return;
-        
-        const aij = graph.hasEdge(i, j) ? 1 : 0;
-        const ki = graph.degree(i);
-        const kj = graph.degree(j);
-        const delta = communityI === communityJ ? 1 : 0;
-        
-        modularity += (aij - (ki * kj) / (2 * m)) * delta;
-      });
+    // Degree distribution using built-in methods
+    const degrees = [];
+    const degreeMap = {};
+    graph.forEachNode((node) => {
+      const degree = graph.degree(node);
+      degrees.push(degree);
+      degreeMap[degree] = (degreeMap[degree] || 0) + 1;
     });
-    
-    modularityScore = modularity / (2 * m);
-  }
-  
-  // Simple clustering coefficient calculation
-  let totalClusteringCoeff = 0;
-  let validNodes = 0;
-  
-  graph.forEachNode((node) => {
-    const neighbors = graph.neighbors(node);
-    const degree = neighbors.length;
-    
-    if (degree < 2) return; // No clustering possible with less than 2 neighbors
-    
-    let triangles = 0;
-    for (let i = 0; i < neighbors.length; i++) {
-      for (let j = i + 1; j < neighbors.length; j++) {
-        if (graph.hasEdge(neighbors[i], neighbors[j])) {
-          triangles++;
+
+    const maxDegree = Math.max(...degrees);
+    const minDegree = Math.min(...degrees);
+
+    // Community stats - get communities from graph attributes
+    const communities = new Map();
+    graph.forEachNode((node) => {
+      const communityId = graph.getNodeAttribute(node, 'community');
+      if (communityId !== undefined) {
+        if (!communities.has(communityId)) {
+          communities.set(communityId, {
+            nodes: new Set(),
+            edges: new Set(),
+            internalEdges: new Set(),
+            externalEdges: new Set()
+          });
+        }
+        communities.get(communityId).nodes.add(node);
+      }
+    });
+
+    const communityCount = communities.size;
+
+    // Calculate edges for each community and identify internal/external edges
+    graph.forEachEdge((edge, attributes, source, target) => {
+      const sourceCommunity = graph.getNodeAttribute(source, 'community');
+      const targetCommunity = graph.getNodeAttribute(target, 'community');
+      
+      if (sourceCommunity !== undefined && targetCommunity !== undefined) {
+        // This edge connects two nodes with communities
+        if (sourceCommunity === targetCommunity) {
+          // Internal edge
+          if (communities.has(sourceCommunity)) {
+            communities.get(sourceCommunity).internalEdges.add(edge);
+            communities.get(sourceCommunity).edges.add(edge);
+          }
+        } else {
+          // External edge - add to both communities as external
+          if (communities.has(sourceCommunity)) {
+            communities.get(sourceCommunity).externalEdges.add(edge);
+            communities.get(sourceCommunity).edges.add(edge);
+          }
+          if (communities.has(targetCommunity)) {
+            communities.get(targetCommunity).externalEdges.add(edge);
+            communities.get(targetCommunity).edges.add(edge);
+          }
         }
       }
-    }
-    
-    const possibleTriangles = (degree * (degree - 1)) / 2;
-    const clusteringCoeff = possibleTriangles > 0 ? triangles / possibleTriangles : 0;
-    totalClusteringCoeff += clusteringCoeff;
-    validNodes++;
-  });
-
-  const avgClusteringCoeff = validNodes > 0 ? totalClusteringCoeff / validNodes : 0;
-
-  // Connected components using graph traversal
-  const visited = new Set();
-  const components = [];
-  
-  graph.forEachNode((startNode) => {
-    if (visited.has(startNode)) return;
-    
-    const component = [];
-    const queue = [startNode];
-    
-    while (queue.length > 0) {
-      const node = queue.shift();
-      if (visited.has(node)) continue;
-      
-      visited.add(node);
-      component.push(node);
-      
-      graph.forEachNeighbor(node, (neighbor) => {
-        if (!visited.has(neighbor)) {
-          queue.push(neighbor);
-        }
-      });
-    }
-    
-    components.push(component);
-  });
-
-  const largestComponent = components.length > 0 ? Math.max(...components.map(comp => comp.length)) : 0;
-
-  // Edge weight statistics
-  const weights = [];
-  graph.forEachEdge((edge, attributes) => {
-    if (attributes.weight) weights.push(parseFloat(attributes.weight));
-  });
-
-  const weightExtent = weights.length > 0 ? [Math.min(...weights), Math.max(...weights)] : [0, 0];
-  const avgWeight = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0;
-
-  // Assortativity (degree correlation)
-  let assortativity = 0;
-  if (graph.size > 0) {
-    const edges = [];
-    graph.forEachEdge((edge, attributes, source, target) => {
-      edges.push([graph.degree(source), graph.degree(target)]);
     });
+
+    // Calculate community-level statistics
+    const communityStats = {};
+    let totalModularity = 0;
+    const m = graph.size; // Total edges in graph
+
+    communities.forEach((communityData, communityId) => {
+      const nodeCount = communityData.nodes.size;
+      const internalEdgeCount = communityData.internalEdges.size;
+      const externalEdgeCount = communityData.externalEdges.size;
+      const totalEdgeCount = internalEdgeCount + externalEdgeCount;
+
+      // Calculate degrees within this community
+      let communityDegrees = [];
+      let communityMaxDegree = 0;
+      let communityMinDegree = Infinity;
+      let totalDegree = 0;
+
+      communityData.nodes.forEach(node => {
+        const degree = graph.degree(node);
+        communityDegrees.push(degree);
+        totalDegree += degree;
+        communityMaxDegree = Math.max(communityMaxDegree, degree);
+        communityMinDegree = Math.min(communityMinDegree, degree);
+      });
+
+      const avgDegree = nodeCount > 0 ? totalDegree / nodeCount : 0;
+
+      // Calculate density for this community
+      const possibleEdges = nodeCount > 1 ? (nodeCount * (nodeCount - 1)) / 2 : 0;
+      const density = possibleEdges > 0 ? internalEdgeCount / possibleEdges : 0;
+
+      // Calculate clustering coefficient for this community
+      let totalClusteringCoeff = 0;
+      let validNodes = 0;
+
+      communityData.nodes.forEach(node => {
+        const neighbors = graph.neighbors(node);
+        const degree = neighbors.length;
+        
+        if (degree < 2) return;
+        
+        let triangles = 0;
+        for (let i = 0; i < neighbors.length; i++) {
+          for (let j = i + 1; j < neighbors.length; j++) {
+            if (graph.hasEdge(neighbors[i], neighbors[j])) {
+              triangles++;
+            }
+          }
+        }
+        
+        const possibleTriangles = (degree * (degree - 1)) / 2;
+        const clusteringCoeff = possibleTriangles > 0 ? triangles / possibleTriangles : 0;
+        totalClusteringCoeff += clusteringCoeff;
+        validNodes++;
+      });
+
+      const avgClusteringCoeff = validNodes > 0 ? totalClusteringCoeff / validNodes : 0;
+
+      // Calculate modularity contribution for this community
+      let communityModularity = 0;
+      if (m > 0) {
+        communityData.nodes.forEach(i => {
+          const ki = graph.degree(i);
+          communityData.nodes.forEach(j => {
+            if (i !== j) {
+              const kj = graph.degree(j);
+              const aij = graph.hasEdge(i, j) ? 1 : 0;
+              communityModularity += (aij - (ki * kj) / (2 * m));
+            }
+          });
+        });
+        communityModularity = communityModularity / (2 * m);
+        totalModularity += communityModularity;
+      }
+
+      communityStats[communityId] = {
+        nodeCount,
+        internalEdgeCount,
+        externalEdgeCount,
+        totalEdgeCount,
+        density,
+        avgDegree,
+        maxDegree: communityMaxDegree,
+        minDegree: communityMinDegree,
+        avgClusteringCoeff,
+        modularity: communityModularity,
+        isolation: internalEdgeCount > 0 ? internalEdgeCount / totalEdgeCount : 0,
+        connectivity: externalEdgeCount > 0 ? externalEdgeCount / totalEdgeCount : 0
+      };
+    });
+
+    // Calculate global clustering coefficient
+    let totalClusteringCoeff = 0;
+    let validNodes = 0;
     
-    if (edges.length > 0) {
-      const meanX = edges.reduce((sum, [x]) => sum + x, 0) / edges.length;
-      const meanY = edges.reduce((sum, [, y]) => sum + y, 0) / edges.length;
+    graph.forEachNode((node) => {
+      const neighbors = graph.neighbors(node);
+      const degree = neighbors.length;
       
-      let numerator = 0;
-      let denomX = 0;
-      let denomY = 0;
+      if (degree < 2) return;
       
-      edges.forEach(([x, y]) => {
-        const dx = x - meanX;
-        const dy = y - meanY;
-        numerator += dx * dy;
-        denomX += dx * dx;
-        denomY += dy * dy;
+      let triangles = 0;
+      for (let i = 0; i < neighbors.length; i++) {
+        for (let j = i + 1; j < neighbors.length; j++) {
+          if (graph.hasEdge(neighbors[i], neighbors[j])) {
+            triangles++;
+          }
+        }
+      }
+      
+      const possibleTriangles = (degree * (degree - 1)) / 2;
+      const clusteringCoeff = possibleTriangles > 0 ? triangles / possibleTriangles : 0;
+      totalClusteringCoeff += clusteringCoeff;
+      validNodes++;
+    });
+
+    const avgClusteringCoeff = validNodes > 0 ? totalClusteringCoeff / validNodes : 0;
+
+    // Connected components using graph traversal
+    const visited = new Set();
+    const components = [];
+    
+    graph.forEachNode((startNode) => {
+      if (visited.has(startNode)) return;
+      
+      const component = [];
+      const queue = [startNode];
+      
+      while (queue.length > 0) {
+        const node = queue.shift();
+        if (visited.has(node)) continue;
+        
+        visited.add(node);
+        component.push(node);
+        
+        graph.forEachNeighbor(node, (neighbor) => {
+          if (!visited.has(neighbor)) {
+            queue.push(neighbor);
+          }
+        });
+      }
+      
+      components.push(component);
+    });
+
+    const largestComponent = components.length > 0 ? Math.max(...components.map(comp => comp.length)) : 0;
+
+    // Edge weight statistics
+    const weights = [];
+    graph.forEachEdge((edge, attributes) => {
+      if (attributes.weight) weights.push(parseFloat(attributes.weight));
+    });
+
+    const weightExtent = weights.length > 0 ? [Math.min(...weights), Math.max(...weights)] : [0, 0];
+    const avgWeight = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0;
+
+    // Assortativity (degree correlation)
+    let assortativity = 0;
+    if (graph.size > 0) {
+      const edges = [];
+      graph.forEachEdge((edge, attributes, source, target) => {
+        edges.push([graph.degree(source), graph.degree(target)]);
       });
       
-      const denominator = Math.sqrt(denomX * denomY);
-      assortativity = denominator > 0 ? numerator / denominator : 0;
+      if (edges.length > 0) {
+        const meanX = edges.reduce((sum, [x]) => sum + x, 0) / edges.length;
+        const meanY = edges.reduce((sum, [, y]) => sum + y, 0) / edges.length;
+        
+        let numerator = 0;
+        let denomX = 0;
+        let denomY = 0;
+        
+        edges.forEach(([x, y]) => {
+          const dx = x - meanX;
+          const dy = y - meanY;
+          numerator += dx * dy;
+          denomX += dx * dx;
+          denomY += dy * dy;
+        });
+        
+        const denominator = Math.sqrt(denomX * denomY);
+        assortativity = denominator > 0 ? numerator / denominator : 0;
+      }
     }
-  }
 
-  // Calculate edge crossings
-  const crossingData = calculateEdgeCrossings(graph);
-
-  return {
-    ...basicStats,
-    communities: communityCount,
-    modularity: modularityScore.toFixed(4),
-    connectedComponents: components.length,
-    largestComponent,
-    componentRatio: graph.order > 0 ? (largestComponent / graph.order).toFixed(3) : '0.000',
-    weightExtent,
-    avgWeight: avgWeight.toFixed(2),
-    maxDegree,
-    minDegree,
-    avgClusteringCoeff: avgClusteringCoeff.toFixed(4),
-    assortativity: assortativity.toFixed(4),
-    degreeDistribution: degreeMap,
-    // Graph diameter (approximate - using BFS from random node)
-    estimatedDiameter: estimateDiameter(graph),
-    // Edge crossing analysis
-    edgeCrossings: crossingData.crossings,
-    crossingDensity: crossingData.crossingDensity.toFixed(4),
-    crossingPairs: crossingData.crossingPairs,
+    // Calculate edge crossings
+    const crossingData = calculateEdgeCrossings(graph);
+    debugger
+    return {
+      ...basicStats,
+      communities: communityCount,
+      modularity: totalModularity.toFixed(4),
+      communityStats, // Add community-level statistics
+      connectedComponents: components.length,
+      largestComponent,
+      componentRatio: graph.order > 0 ? (largestComponent / graph.order).toFixed(3) : '0.000',
+      weightExtent,
+      avgWeight: avgWeight.toFixed(2),
+      maxDegree,
+      minDegree,
+      avgClusteringCoeff: avgClusteringCoeff.toFixed(4),
+      assortativity: assortativity.toFixed(4),
+      degreeDistribution: degreeMap,
+      estimatedDiameter: estimateDiameter(graph),
+      edgeCrossings: crossingData.crossings,
+      crossingDensity: crossingData.crossingDensity.toFixed(4),
+      crossingPairs: crossingData.crossingPairs,
+    };
   };
-};
 
   // Helper function to check if two line segments intersect
   const doLinesIntersect = (p1, q1, p2, q2) => {
@@ -855,7 +955,7 @@ const calculateNetworkMetrics = (graph) => {
           </AccordionItem>
           {/* Edge Weight Statistics */}
           <AccordionItem value="item-4">
-            <AccordionTrigger className="text-md font-medium mb-2">Network Structure</AccordionTrigger>
+            <AccordionTrigger className="text-md font-medium mb-2">Edge Weight</AccordionTrigger>
             <AccordionContent className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <div className="bg-primary-foreground p-2 rounded">
                 <span className="font-medium block">Min Weight:</span> 
@@ -949,11 +1049,63 @@ const calculateNetworkMetrics = (graph) => {
             {/* Regular communities */}
             {Object.entries(communitySizes).map(([communityId,size]) => (
               <div key={communityId} className="flex items-center">
-                <div 
-                  className="w-4 h-4 rounded-full mr-2"
-                  style={{ backgroundColor: communityColors(+communityId) }}
-                />
-                <span className="text-sm">{communityId!=-1?`Community ${+communityId+1}`:"Other"}</span>
+                <Tooltip>
+                  <TooltipTrigger  className="flex items-center">
+                    <div 
+                      className="w-4 h-4 rounded-full mr-2"
+                      style={{ backgroundColor: communityColors(+communityId) }}
+                    />
+                    <span className="text-sm">{communityId!=-1?`Community ${+communityId+1}`:"Other"}</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                        {networkStats.communityStats[communityId]&&(
+                          <div key={communityId} className="border rounded-lg p-4">
+                            
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span>Nodes:</span>
+                                <span className="font-medium">{networkStats.communityStats[communityId].nodeCount}</span>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <span>Internal Edges:</span>
+                                <span className="font-medium">{networkStats.communityStats[communityId].internalEdgeCount}</span>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <span>External Edges:</span>
+                                <span className="font-medium">{networkStats.communityStats[communityId].externalEdgeCount}</span>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <span>Density:</span>
+                                <span className="font-medium">{networkStats.communityStats[communityId].density.toFixed(3)}</span>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <span>Avg Degree:</span>
+                                <span className="font-medium">{networkStats.communityStats[communityId].avgDegree.toFixed(1)}</span>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <span>Clustering:</span>
+                                <span className="font-medium">{networkStats.communityStats[communityId].avgClusteringCoeff.toFixed(3)}</span>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <span>Isolation:</span>
+                                <span className="font-medium">{(networkStats.communityStats[communityId].isolation * 100).toFixed(1)}%</span>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <span>Connectivity:</span>
+                                <span className="font-medium">{(networkStats.communityStats[communityId].connectivity * 100).toFixed(1)}%</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             ))}
           </div>
