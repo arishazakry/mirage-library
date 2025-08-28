@@ -2,15 +2,21 @@
 
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from "react";
 import Sigma from "sigma";
-import { downloadAsImage } from "@sigma/export-image";
+import { downloadAsImage, toBlob } from "@sigma/export-image";
 import Graph from "graphology";
-import { extent, scaleSqrt, scaleOrdinal, schemeCategory10 } from "d3";
+import { extent, scaleSqrt, scaleOrdinal, schemeCategory10,color as d3color } from "d3";
 import { debounce } from "lodash";
 import { Button } from "@/components/ui/button";
 import louvain from "graphology-communities-louvain";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { bindWebGLLayer, createContoursProgram } from "@sigma/layer-webgl";
+import NodeHaloProgram from "./NodeHaloProgram";
+import { createNodeCompoundProgram, NodePointProgram } from "sigma/rendering";
+import { useTheme } from "next-themes";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export const emptyGraph = {
   nodes: [],
@@ -31,56 +37,46 @@ const communityColors = (communityId)=>{
 
 // Function to perform community detection with specified number of communities
 const detectCommunities = (graph, numCommunities) => {
-  // First, run the standard Louvain algorithm
   const communities = louvain(graph);
-  debugger
+  
   // Get all unique communities
   const uniqueCommunities = new Set(Object.values(communities));
-  
-  // If we already have the desired number of communities or fewer, return
-  if (uniqueCommunities.size <= numCommunities) {
-    return communities;
-  }
-  
+
   // Calculate community sizes
   const communitySizes = {};
   Object.values(communities).forEach(community => {
     communitySizes[community] = (communitySizes[community] || 0) + 1;
   });
-  
-  // Sort communities by size (descending) to keep the largest ones
+
+  if (uniqueCommunities.size <= numCommunities) {
+    return { communitySizes, communities };
+  }
+
+  // Sort and keep top
   const sortedCommunities = Object.entries(communitySizes)
     .sort((a, b) => b[1] - a[1])
     .map(([community]) => parseInt(community));
-  
-  // Keep the top (numCommunities - 1) communities and group the rest as "Other"
+
   const otherCommunities = sortedCommunities.slice(numCommunities);
-  
-  // Create mapping for other communities
   const communityMapping = {};
-  otherCommunities.forEach(community => {
-    communityMapping[community] = -1; // -1 represents "Other"
+  otherCommunities.forEach(c => { communityMapping[c] = -1; });
+
+  communitySizes[-1] = 0;
+  otherCommunities.forEach(d => {
+    communitySizes[-1] += communitySizes[d];
+    delete communitySizes[d];
   });
 
-  // update communitySizes
-  communitySizes[-1]=0;
-  otherCommunities.forEach(d=>{
-    communitySizes[-1]+=communitySizes[d];
-    delete communitySizes[d];
-  })
-  
-  // Apply the mapping to create the final communities
   const finalCommunities = {};
   graph.forEachNode(node => {
-    let community = communities[node];
-    if (communityMapping[community] !== undefined) {
-      community = communityMapping[community]; // Map to "Other"
-    }
-    finalCommunities[node] = community;
+    let c = communities[node];
+    if (communityMapping[c] !== undefined) c = communityMapping[c];
+    finalCommunities[node] = c;
   });
-  
-  return {communitySizes,communities:finalCommunities};
+
+  return { communitySizes, communities: finalCommunities };
 };
+
 
 const GraphVisualization = forwardRef(({ 
   data = emptyGraph, 
@@ -96,7 +92,9 @@ const GraphVisualization = forwardRef(({
   const isRunningRef = useRef(false);
   const [isLayoutRunning, setIsLayoutRunning] = useState(false);
   const [communitySizes, setCommunitySizes] = useState({});
+  const [communities, setCommunities] = useState({});
   const [networkStats, setNetworkStats] = useState({});
+  const [graph, setGraph] = useState(null);
   
   // Drag and drop state with force modulation
   const dragStateRef = useRef({
@@ -416,6 +414,13 @@ const GraphVisualization = forwardRef(({
     };
   };
 
+  useImperativeHandle(ref, () => ({
+    startLayout,
+    stopLayout,
+    saveAsPNG: onsaveNetworkAsPNG,
+    getStats: () => networkStats
+  }));
+
   // Helper function to check if two line segments intersect
   const doLinesIntersect = (p1, q1, p2, q2) => {
     const orientation = (p, q, r) => {
@@ -564,6 +569,7 @@ const GraphVisualization = forwardRef(({
     // Add nodes first without community coloring
     data.nodes.forEach((node) => {
       graph.addNode(node.id, {
+        type: "circle",
         label: node.label || node.id,
         size: sizescale(node.size || 1),
         color: "#666",
@@ -597,12 +603,38 @@ const GraphVisualization = forwardRef(({
       }
     });
 
+    // Create renderer
+    const renderer = new Sigma(graph, containerRef.current, {
+      renderEdgeLabels: false,
+      defaultNodeColor: "#666",
+      defaultEdgeColor: "#ccc",
+      labelColor: { color: "#000" },
+      labelSize: 12,
+      labelWeight: "bold",
+      enableEdgeClickEvents: true,
+      enableEdgeWheelEvents: true,
+      minCameraRatio: 0.1,
+      maxCameraRatio: 10,
+      // nodeProgramClasses:{
+      //     circle: createNodeCompoundProgram([
+      //     NodeHaloProgram,
+      //     NodePointProgram
+      //   ]),
+      // },
+      // nodeHoverProgramClasses: {
+      //   circle: createNodeCompoundProgram([
+      //     NodePointProgram
+      //   ]),
+      // }
+    });
+
     // Perform community detection if enabled
     if (communityDetection && graph.order > 0) {
       try {
         console.log("Performing community detection for", numCommunities, "communities");
         const {communitySizes,communities} = detectCommunities(graph, numCommunities);
         setCommunitySizes(communitySizes);
+        setCommunities(communities);
         // Apply community colors to nodes
         graph.forEachNode((node) => {
           const communityId = communities[node];
@@ -610,11 +642,50 @@ const GraphVisualization = forwardRef(({
           nodeColor = communityColors(communityId);   
           graph.setNodeAttribute(node, "color", nodeColor);
           graph.setNodeAttribute(node, "community", communityId);
+
+          graph.mergeNodeAttributes(node, {
+            // type: "circle",
+            color: nodeColor,
+            community: communityId,
+            // haloSize: 100,
+            // haloIntensity: 1,
+            // haloColor: nodeColor
+          });
         });
         
-        const detectedCommunities = new Set(Object.values(communities));
-        console.log("Community detection completed with", detectedCommunities.size, "communities");
+        // const detectedCommunities = new Set(Object.values(communities));
+        // // console.log("Community detection completed with", detectedCommunities.size, "communities");
         
+        // detectedCommunities.forEach((c) => {
+        //   const community = +c;
+        //   if (community!=-1){
+        //     const baseColor = communityColors(community);
+        //     let colorWithOpacity = d3color(baseColor);
+        //     if (colorWithOpacity) {
+        //       colorWithOpacity.opacity = 0.7;  // set 30% opacity
+        //       colorWithOpacity = colorWithOpacity.darker(2);
+        //     }
+        //     bindWebGLLayer(
+        //       `metaball-${community}`,
+        //       renderer,
+        //       createContoursProgram(
+        //         graph.filterNodes((_node) => communities[_node]===community),
+        //         {
+        //           radius: 50,
+        //           levels: [
+        //             {
+        //               color: colorWithOpacity.toString(),
+        //               threshold: 0.5,
+        //             }
+        //           ]
+        //           // color: communityColors(community),
+        //           // opacity: 0.25,
+        //           // smoothingRadius: 25,
+        //           // isBlending: true,
+        //         }
+        //       ),
+        //     );}
+        // });
       } catch (error) {
         console.error("Error in community detection:", error);
         // Fallback: assign random communities
@@ -633,19 +704,7 @@ const GraphVisualization = forwardRef(({
     stats.weightScale = weightScale;
     setNetworkStats(stats);
 
-    // Create renderer
-    const renderer = new Sigma(graph, containerRef.current, {
-      renderEdgeLabels: false,
-      defaultNodeColor: "#666",
-      defaultEdgeColor: "#ccc",
-      labelColor: { color: "#000" },
-      labelSize: 12,
-      labelWeight: "bold",
-      enableEdgeClickEvents: true,
-      enableEdgeWheelEvents: true,
-      minCameraRatio: 0.1,
-      maxCameraRatio: 10,
-    });
+    
 
     // Drag and Drop Implementation with soft force
     const handleMouseDown = (e) => {
@@ -698,7 +757,7 @@ const GraphVisualization = forwardRef(({
       const stats = calculateNetworkMetrics(graph);
       stats.weightScale = weightScale;
       setNetworkStats(stats);
-    }, 300);
+    }, 500);
     
     // Add drag and drop event listeners
     renderer.on("afterRender", updateMetrics);
@@ -734,23 +793,20 @@ const GraphVisualization = forwardRef(({
       renderer.refresh();
     });
 
-    renderer.on("leaveNode", ({ node }) => {
-      // Reset colors (but preserve drag highlighting)
+    renderer.on("leaveNode", () => {
       graph.forEachNode((n, attributes) => {
-        const originalColor = communityDetection && attributes.community !== undefined 
+        const originalColor = communityDetection && attributes.community !== undefined
           ? communityColors(attributes.community)
           : "#666";
         graph.setNodeAttribute(n, "color", originalColor);
-        if (!dragStateRef.current.isDragging || dragStateRef.current.draggedNode !== n) {
-          graph.setNodeAttribute(n, "highlighted", false);
-        }
+        graph.setNodeAttribute(n, "highlighted", false);
       });
-      
+
       graph.forEachEdge((edge, attributes) => {
         graph.setEdgeAttribute(edge, "color", "#ccc");
-        graph.setEdgeAttribute(edge, "size", attributes.weight ? Math.max(0.5, Math.min(5, attributes.weight / 2)) : 1);
+        graph.setEdgeAttribute(edge, "size", stats.weightScale(attributes.weight));
       });
-      
+
       renderer.refresh();
     });
 
@@ -829,6 +885,7 @@ const GraphVisualization = forwardRef(({
       console.error("Error creating layout:", error);
       rendererRef.current = renderer;
     }
+    setGraph(graph)
     startLayout();
     return () => {
       if (layoutRef.current) {
@@ -847,9 +904,47 @@ const GraphVisualization = forwardRef(({
         }
       }
       isRunningRef.current=(false);
-      dragStateRef.current = { isDragging: false, draggedNode: null };
+      dragStateRef.current = { isDragging: false, draggedNode: null, dragStartTime: null };
     };
   }, [data, threshold, communityDetection, numCommunities]);
+  const { theme } = useTheme();
+  useEffect(()=>{
+    if (rendererRef.current && communityDetection) {
+        const cleanList = [];
+        const detectedCommunities = new Set(Object.values(communities));
+        detectedCommunities.forEach((c) => {
+          const community = +c;
+          if (community !== -1) {
+            const baseColor = communityColors(community);
+            const shadowColor = adjustColorWithTheme(baseColor, theme, 0.6);
+
+            cleanList.push(bindWebGLLayer(
+              `metaball-${community}`,
+              rendererRef.current,
+              createContoursProgram(
+                graph.filterNodes((_node) => communities[_node] === community),
+                {
+                  radius: 50,
+                  levels: [
+                    {
+                      color: shadowColor,
+                      threshold: 0.5,
+                    }
+                  ]
+                }
+              )
+            ));
+          }
+        });
+        return ()=>{
+          cleanList.forEach(c=>{
+            c();
+            c=null;
+          })
+        }
+      }
+  },[theme,communities,communityDetection,graph]
+  );
 
   const onsaveNetworkAsPNG = useCallback(() => {
     if (rendererRef.current) {
@@ -864,6 +959,94 @@ const GraphVisualization = forwardRef(({
       });
     }
   }, [rendererRef]);
+
+  const onsaveNetworkAsPDF = useCallback(async() => {
+    if (rendererRef.current) {
+      // 1. Export graph to Base64 PNG
+        const blob = await toBlob(rendererRef.current, {
+        layers: ["edges", "nodes", "edgeLabels", "labels"],
+        format: "png",
+        fileName: "network-export",
+        backgroundColor: "#ffffff",
+        width: 1200,
+        height: 800,
+        cameraState: undefined,
+      });
+       if (!blob) return;
+
+  // 2. Convert Blob → Base64
+      const base64 = await blobToBase64(blob);
+      debugger
+        // 2. Create PDF
+        const doc = new jsPDF("p", "pt", "a4");
+        doc.text("Network Analysis Report", 40, 40);
+        doc.setFontSize(12);
+        doc.text("Generated by MIRAGE-DASHBOARD", 40, 65);
+        // 3. Add image
+        doc.addImage(base64, "PNG", 40, 90, 500, 300);
+        // --- Paragraph ---
+        doc.setFontSize(12);
+        doc.text(
+          "This report contains an exported network visualization along with key statistics summarizing the graph data.",
+          40,
+          420,
+          { maxWidth: 500 }
+        );
+        let startTitleY = 430;
+        for (const [communityId, size] of Object.entries(communitySizes)) {
+            const stats = networkStats.communityStats[communityId];
+            if (!stats) continue;
+
+            const communityName =
+              communityId !== "-1" ? `Community ${+communityId + 1}` : "Other";
+
+            // Section Title
+            doc.setFontSize(14);
+            startTitleY +=30;
+            doc.text(communityName, 40, startTitleY);
+
+            // Community Stats Table
+            doc.setFontSize(12);
+            const metrics = [
+            ["Nodes", stats.nodeCount],
+            ["Internal Edges", stats.internalEdgeCount],
+            ["External Edges", stats.externalEdgeCount],
+            ["Density", stats.density.toFixed(3)],
+            ["Avg Degree", stats.avgDegree.toFixed(1)],
+            ["Clustering", stats.avgClusteringCoeff.toFixed(3)],
+            ["Isolation", (stats.isolation * 100).toFixed(1) + "%"],
+            ["Connectivity", (stats.connectivity * 100).toFixed(1) + "%"],
+          ];
+
+          // Starting Y position (e.g. after image or previous section)
+          let y = startTitleY+20;
+
+          // Render each metric as "Key: Value"
+          metrics.forEach(([key, value]) => {
+            doc.text(`${key}: ${value}`, 40, y);
+            y += 20; // spacing between lines
+          });
+
+          startTitleY = y+10;
+            // autoTable(doc, {
+            //   startY: startTitleY + 20,
+            //   head: [["Metric", "Value"]],
+            //   body: [
+            //     ["Nodes", stats.nodeCount],
+            //     ["Internal Edges", stats.internalEdgeCount],
+            //     ["External Edges", stats.externalEdgeCount],
+            //     ["Density", stats.density.toFixed(3)],
+            //     ["Avg Degree", stats.avgDegree.toFixed(1)],
+            //     ["Clustering", stats.avgClusteringCoeff.toFixed(3)],
+            //     ["Isolation", (stats.isolation * 100).toFixed(1) + "%"],
+            //     ["Connectivity", (stats.connectivity * 100).toFixed(1) + "%"],
+            //   ],
+            // });
+          }
+        // 4. Save PDF
+        doc.save("graph.pdf");
+    }
+  }, [rendererRef,communitySizes,networkStats]);
 
   if (!data?.nodes?.length) {
     return (
@@ -1003,6 +1186,12 @@ const GraphVisualization = forwardRef(({
           >
             Save image
           </Button>
+          <Button
+            onClick={onsaveNetworkAsPDF}
+            className="px-4 py-2"
+          >
+            Save PDF
+          </Button>
         </div>
         <p className="text-sm text-gray-600 mt-2">
           💡 <strong>Tip:</strong> Click and drag nodes to reposition them. Dragged nodes will have reduced force for 3 seconds, allowing gradual settling while maintaining some layout dynamics.
@@ -1118,3 +1307,25 @@ const GraphVisualization = forwardRef(({
 GraphVisualization.displayName = 'GraphVisualization';
 
 export default GraphVisualization;
+
+
+const adjustColorWithTheme = (baseColor, theme, opacity = 0.7) => {
+  let c = d3color(baseColor);
+  if (!c) return baseColor;
+
+  // Dark mode → make color brighter so it pops
+  // Light mode → make it slightly darker
+  c = theme === "dark" ? c.brighter(1.2) : c.darker(0.8);
+
+  c.opacity = opacity; // shadow-like
+  return c.toString();
+};
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}

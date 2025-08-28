@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "-": "^0.0.1",
     "@elastic/elasticsearch": "^8.17.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -36,6 +37,7 @@
     "@react-spring/web": "^9.7.5",
     "@reduxjs/toolkit": "^2.5.1",
     "@sigma/export-image": "^3.0.0",
+    "@sigma/layer-webgl": "^3.0.0",
     "@tanstack/react-query": "^5.67.3",
     "axios": "^1.7.9",
     "canvas-to-image": "^2.2.5",
@@ -53,6 +55,8 @@
     "graphology-layout-forceatlas2": "^0.10.1",
     "graphology-metrics": "^2.4.0",
     "json2csv": "^6.0.0-alpha.2",
+    "jspdf": "^3.0.2",
+    "jspdf-autotable": "^5.0.2",
     "lodash": "^4.17.21",
     "lucide-react": "^0.474.0",
     "lz-string": "^1.5.0",
