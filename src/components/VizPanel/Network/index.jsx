@@ -16,7 +16,7 @@ import NodeHaloProgram from "./NodeHaloProgram";
 import { createNodeCompoundProgram, NodePointProgram } from "sigma/rendering";
 import { useTheme } from "next-themes";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { applyPlugin } from "jspdf-autotable";
 
 export const emptyGraph = {
   nodes: [],
@@ -976,8 +976,8 @@ const GraphVisualization = forwardRef(({
 
   // 2. Convert Blob → Base64
       const base64 = await blobToBase64(blob);
-      debugger
         // 2. Create PDF
+        applyPlugin(jsPDF);
         const doc = new jsPDF("p", "pt", "a4");
         doc.text("Network Analysis Report", 40, 40);
         doc.setFontSize(12);
@@ -993,56 +993,86 @@ const GraphVisualization = forwardRef(({
           { maxWidth: 500 }
         );
         let startTitleY = 430;
+        let head = [["Metric"]];
+        let body = [
+            ["Nodes"],
+            ["Internal Edges"],
+            ["External Edges"],
+            ["Density"],
+            ["Avg Degree"],
+            ["Clustering"],
+            ["Isolation"],
+            ["Connectivity"],
+          ]
         for (const [communityId, size] of Object.entries(communitySizes)) {
             const stats = networkStats.communityStats[communityId];
             if (!stats) continue;
-
+            
+          //   const table = doc.lastAutoTable;
+          //   startTitleY =table?.finalY??startTitleY;
+          //   debugger
             const communityName =
               communityId !== "-1" ? `Community ${+communityId + 1}` : "Other";
+            
+          //   // Section Title
+          //   doc.setFontSize(14);
+          //   startTitleY +=30;
+          //   doc.text(communityName, 40, startTitleY);
 
-            // Section Title
-            doc.setFontSize(14);
-            startTitleY +=30;
-            doc.text(communityName, 40, startTitleY);
+          //   // Community Stats Table
+          //   doc.setFontSize(12);
+          //   const metrics = [
+          //   ["Nodes", stats.nodeCount],
+          //   ["Internal Edges", stats.internalEdgeCount],
+          //   ["External Edges", stats.externalEdgeCount],
+          //   ["Density", stats.density.toFixed(3)],
+          //   ["Avg Degree", stats.avgDegree.toFixed(1)],
+          //   ["Clustering", stats.avgClusteringCoeff.toFixed(3)],
+          //   ["Isolation", (stats.isolation * 100).toFixed(1) + "%"],
+          //   ["Connectivity", (stats.connectivity * 100).toFixed(1) + "%"],
+          // ];
 
-            // Community Stats Table
-            doc.setFontSize(12);
-            const metrics = [
-            ["Nodes", stats.nodeCount],
-            ["Internal Edges", stats.internalEdgeCount],
-            ["External Edges", stats.externalEdgeCount],
-            ["Density", stats.density.toFixed(3)],
-            ["Avg Degree", stats.avgDegree.toFixed(1)],
-            ["Clustering", stats.avgClusteringCoeff.toFixed(3)],
-            ["Isolation", (stats.isolation * 100).toFixed(1) + "%"],
-            ["Connectivity", (stats.connectivity * 100).toFixed(1) + "%"],
-          ];
+          // // Starting Y position (e.g. after image or previous section)
+          // let y = startTitleY+20;
 
-          // Starting Y position (e.g. after image or previous section)
-          let y = startTitleY+20;
+          //  doc.autoTable({
+          //     startY: startTitleY + 20,
+          //     head: [["Metric", "Value"]],
+          //     body: metrics,
+          //   });
 
-          // Render each metric as "Key: Value"
-          metrics.forEach(([key, value]) => {
-            doc.text(`${key}: ${value}`, 40, y);
-            y += 20; // spacing between lines
+          // startTitleY = y+metrics.length*20+40;
+
+          head[0].push(communityName);
+          body[0].push(stats.nodeCount);
+          body[1].push( stats.internalEdgeCount);
+          body[2].push(stats.externalEdgeCount);
+          body[3].push(stats.density.toFixed(3));
+          body[4].push(stats.avgDegree.toFixed(1));
+          body[5].push(stats.avgClusteringCoeff.toFixed(3));
+          body[6].push((stats.isolation * 100).toFixed(1) + "%");
+          body[7].push((stats.connectivity * 100).toFixed(1) + "%");        
+           
+        }
+
+        const chunkSize = 5; // max columns per table
+        for (let i = 0; i < head[0].length; i += chunkSize) {
+          const cols = head[0].slice(i, i + chunkSize);
+          const data = body.map(r => r.slice(i, i + chunkSize));
+          startTitleY =  (doc.lastAutoTable?.finalY??startTitleY) + 20;
+           doc.autoTable({
+            head: [cols],
+            body: data,
+            startY: startTitleY,
+            // styles: { fontSize: 8 },
           });
-
-          startTitleY = y+10;
-            // autoTable(doc, {
+        }
+            //       doc.autoTable({
             //   startY: startTitleY + 20,
-            //   head: [["Metric", "Value"]],
-            //   body: [
-            //     ["Nodes", stats.nodeCount],
-            //     ["Internal Edges", stats.internalEdgeCount],
-            //     ["External Edges", stats.externalEdgeCount],
-            //     ["Density", stats.density.toFixed(3)],
-            //     ["Avg Degree", stats.avgDegree.toFixed(1)],
-            //     ["Clustering", stats.avgClusteringCoeff.toFixed(3)],
-            //     ["Isolation", (stats.isolation * 100).toFixed(1) + "%"],
-            //     ["Connectivity", (stats.connectivity * 100).toFixed(1) + "%"],
-            //   ],
+            //   head,
+            //   body,
             // });
-          }
+
         // 4. Save PDF
         doc.save("graph.pdf");
     }
