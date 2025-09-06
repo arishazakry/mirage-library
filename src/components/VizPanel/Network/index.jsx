@@ -1055,7 +1055,7 @@ const GraphVisualization = forwardRef(({
            
         }
 
-        const chunkSize = 5; // max columns per table
+        const chunkSize = 6; // max columns per table
         for (let i = 0; i < head[0].length; i += chunkSize) {
           const cols = head[0].slice(i, i + chunkSize);
           const data = body.map(r => r.slice(i, i + chunkSize));
