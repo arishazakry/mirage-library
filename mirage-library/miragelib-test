@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PG_CONTAINER="mirage-lib-postgres"
+ES_CONTAINER="mirage-lib-elasticsearch"
+
+usage() {
+  cat <<'EOF'
+miragelib-test
+
+Starts local dependencies (Postgres + Elasticsearch via Docker) and runs Next dev server.
+
+Usage:
+  mirage-library/miragelib-test [--test]
+
+Options:
+  --test   Run mirage-library/test.py after services are healthy, then exit.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+RUN_TESTS=false
+if [[ "${1:-}" == "--test" ]]; then
+  RUN_TESTS=true
+fi
+
+require_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "Missing required command: $1"
+    exit 1
+  fi
+}
+
+require_cmd docker
+require_cmd npm
+require_cmd curl
+
+if [[ ! -f "$ROOT_DIR/.env.local" ]]; then
+  if [[ -f "$ROOT_DIR/env.local.example" ]]; then
+    cp "$ROOT_DIR/env.local.example" "$ROOT_DIR/.env.local"
+    echo "Created $ROOT_DIR/.env.local from env.local.example"
+  else
+    echo "Missing env.local.example in $ROOT_DIR"
+    exit 1
+  fi
+fi
+
+# Load local env for this script
+set -a
+# shellcheck disable=SC1091
+source "$ROOT_DIR/.env.local"
+set +a
+
+PG_USER="${PG_USER:-postgres}"
+PG_PASSWORD="${PG_PASSWORD:-password}"
+PG_DATABASE="${PG_DATABASE:-radio_db}"
+PG_PORT="${PG_PORT:-5432}"
+
+ES_NODE="${ES_NODE:-http://localhost:9200}"
+ES_USERNAME="${ES_USERNAME:-elastic}"
+ES_PASSWORD="${ES_PASSWORD:-changeme}"
+ES_PORT="$(echo "$ES_NODE" | sed -E 's#^https?://[^:]+:([0-9]+).*$#\1#')"
+if [[ "$ES_PORT" == "$ES_NODE" ]]; then
+  ES_PORT=9200
+fi
+
+start_postgres() {
+  if docker ps -a --format '{{.Names}}' | grep -q "^${PG_CONTAINER}$"; then
+    docker start "$PG_CONTAINER" >/dev/null
+    echo "Postgres container started: $PG_CONTAINER"
+  else
+    docker run -d \
+      --name "$PG_CONTAINER" \
+      -e POSTGRES_USER="$PG_USER" \
+      -e POSTGRES_PASSWORD="$PG_PASSWORD" \
+      -e POSTGRES_DB="$PG_DATABASE" \
+      -p "${PG_PORT}:5432" \
+      postgres:16 >/dev/null
+    echo "Postgres container created: $PG_CONTAINER"
+  fi
+}
+
+start_elasticsearch() {
+  if docker ps -a --format '{{.Names}}' | grep -q "^${ES_CONTAINER}$"; then
+    docker start "$ES_CONTAINER" >/dev/null
+    echo "Elasticsearch container started: $ES_CONTAINER"
+  else
+    docker run -d \
+      --name "$ES_CONTAINER" \
+      -e discovery.type=single-node \
+      -e ELASTIC_PASSWORD="$ES_PASSWORD" \
+      -e xpack.security.enabled=true \
+      -e xpack.security.http.ssl.enabled=false \
+      -e ES_JAVA_OPTS="-Xms512m -Xmx512m" \
+      -p "${ES_PORT}:9200" \
+      docker.elastic.co/elasticsearch/elasticsearch:8.17.0 >/dev/null
+    echo "Elasticsearch container created: $ES_CONTAINER"
+  fi
+}
+
+wait_for_postgres() {
+  echo "Waiting for Postgres..."
+  for _ in {1..60}; do
+    if docker exec "$PG_CONTAINER" pg_isready -U "$PG_USER" -d "$PG_DATABASE" >/dev/null 2>&1; then
+      echo "Postgres is ready."
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Postgres did not become ready in time."
+  exit 1
+}
+
+wait_for_elasticsearch() {
+  echo "Waiting for Elasticsearch..."
+  for _ in {1..90}; do
+    if curl -s -u "${ES_USERNAME}:${ES_PASSWORD}" "http://localhost:${ES_PORT}/_cluster/health" >/dev/null; then
+      echo "Elasticsearch is ready."
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Elasticsearch did not become ready in time."
+  exit 1
+}
+
+start_postgres
+start_elasticsearch
+wait_for_postgres
+wait_for_elasticsearch
+
+if [[ "$RUN_TESTS" == "true" ]]; then
+  echo "Running API tests..."
+  (cd "$ROOT_DIR" && python3 mirage-library/test.py)
+  exit $?
+fi
+
+echo "Starting Next.js dev server..."
+cd "$ROOT_DIR"
+npm run dev

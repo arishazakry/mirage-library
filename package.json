@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "-": "^0.0.1",
     "@elastic/elasticsearch": "^8.17.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",

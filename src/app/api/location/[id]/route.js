@@ -1,3 +1,6 @@
+import { NextResponse } from "next/server";
+import esClient from "../../config/elasticsearch";
+
 export async function GET(req, { params }) {
   const { id } = params;
   try {
