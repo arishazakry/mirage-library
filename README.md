@@ -23,7 +23,7 @@ This repository does not yet include PyPI packaging metadata, so installation is
 
 1. Download the package archive:
 
-Package archive: [mirage-library-test.zip](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library-test.zip)
+Package archive: [mirage-library-test.zip](https://github.com/arishazakry/mirage-library/releases/tag/v1.0.0)
 
 ```bash
 unzip mirage-library-test.zip
