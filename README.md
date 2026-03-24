@@ -19,13 +19,14 @@ https://dashboard.mirage-project.org/api
 
 ### Installation
 
-This repository does not yet include PyPI packaging metadata, so installation is currently source-based.
+This repository does not yet include PyPI packaging metadata, so installation is currently package-source based.
 
-1. Clone the repository:
+1. Download the package archive:
+
+Package archive: [mirage-library-test.zip](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library-test.zip)
 
 ```bash
-git clone <repo-url>
-cd mirage-library
+unzip mirage-library-test.zip
 ```
 
 2. Create and activate a virtual environment:
@@ -41,10 +42,10 @@ source .venv/bin/activate
 pip install requests pandas
 ```
 
-4. Add the library source directory to `PYTHONPATH`:
+4. Add the extracted library directory to `PYTHONPATH`:
 
 ```bash
-export PYTHONPATH="$PWD/mirage-library:$PYTHONPATH"
+export PYTHONPATH="$PWD/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library:$PYTHONPATH"
 ```
 
 ### Configure API Access
@@ -60,7 +61,7 @@ export MIRAGE_API_BASE="https://dashboard.mirage-project.org/api"
 Use the built-in endpoint test script:
 
 ```bash
-python3 mirage-library/test.py
+python3 Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/test.py
 ```
 
 ## Usage
@@ -107,6 +108,52 @@ The client targets these dashboard routes:
 - `GET /filters/available`
 - `GET /range`
 - `POST /download`
+
+## Available Functions
+
+### Search
+
+- `search(...)`: main search interface with query text, filters, pagination, and convenience keyword arguments like country, artist, track, and station.
+- `search_suggest(query, field='artist_sp_name', category='artist', limit=10)`: autocomplete suggestions for search fields.
+
+### Location
+
+- `get_locations()`: return all available locations as a DataFrame.
+- `get_location(location_id)`: return metadata for a single location.
+- `get_location_fields()`: list supported location filter fields.
+- `get_countries()`: convenience alias for location listing.
+
+### Station
+
+- `get_stations_by_city(city=None)`: return stations, optionally filtered by city.
+- `get_station_fields()`: list supported station filter fields.
+
+### Metadata
+
+- `get_track_meta(track_id)`: return detailed metadata for a specific track.
+
+### Visualization
+
+- `get_viz_data(viz_type='general', **params)`: generic visualization endpoint wrapper.
+- `get_map_data(**params)`: map aggregation data.
+- `get_network_data(**params)`: network graph data for relationships such as artists.
+- `get_histogram_data(field, **params)`: histogram data for a selected field.
+- `get_scatter_data(x_field, y_field, **params)`: scatter plot data for two metrics.
+- `get_radar_data(**params)`: radar chart data.
+- `get_average_stats(**params)`: aggregate summary statistics.
+
+### Filters And Export
+
+- `get_available_filters()`: return the list of supported filters and metadata.
+- `get_data_range(field=None)`: return min/max range data for numeric fields.
+- `download_data(format='csv', filters=None, query=None, ids=None)`: download filtered export data as bytes.
+- `export_to_csv(dataframe, filename)`: save a DataFrame to CSV locally.
+
+### Convenience Helpers
+
+- `get_tracks_by_country(country, limit=100)`: country-filtered search shortcut.
+- `get_tracks_by_artist(artist, limit=100)`: artist-filtered search shortcut.
+- `get_statistics()`: high-level corpus summary built from multiple endpoints.
 
 ## Current Status
 
