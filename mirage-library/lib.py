@@ -10,6 +10,8 @@ import warnings
 import json
 import os
 
+DEFAULT_API_BASE = "https://dashboard.mirage-project.org/api"
+
 
 class MIRAGEClient:
     """
@@ -31,10 +33,11 @@ class MIRAGEClient:
         
         Args:
             base_url: Base URL for API.
-                Defaults to MIRAGE_API_BASE env var, then http://localhost:3000/api
+                Defaults to MIRAGE_API_BASE env var, then
+                https://dashboard.mirage-project.org/api
             timeout: Request timeout in seconds (default: 30)
         """
-        resolved_base_url = base_url or os.getenv('MIRAGE_API_BASE', 'http://localhost:3000/api')
+        resolved_base_url = base_url or os.getenv('MIRAGE_API_BASE', DEFAULT_API_BASE)
         self.base_url = resolved_base_url.rstrip('/')
         self.timeout = timeout
         self.session = requests.Session()

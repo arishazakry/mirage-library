@@ -8,9 +8,9 @@ import requests
 import json
 import os
 
-# Default to local Next.js API routes in this repo.
+# Default to the deployed dashboard API.
 # Override with: MIRAGE_API_BASE="https://your-host/api"
-BASE_URL = os.getenv('MIRAGE_API_BASE', 'http://localhost:3000/api')
+BASE_URL = os.getenv('MIRAGE_API_BASE', 'https://dashboard.mirage-project.org/api')
 
 
 def parse_sse_events(raw_text):
