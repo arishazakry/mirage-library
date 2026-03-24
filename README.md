@@ -1,37 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# mirage-library
 
-## Getting Started
+Python client for the MIRAGE dashboard API.
 
-First, run the development server:
+## Overview
+
+`mirage-library` wraps the live MIRAGE dashboard endpoints for programmatic access from Python. The current production API base is:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+https://dashboard.mirage-project.org/api
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quick Start
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Requirements
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Python 3.10+
+- `pip`
 
-## Learn More
+### Installation
 
-To learn more about Next.js, take a look at the following resources:
+This repository does not yet include PyPI packaging metadata, so installation is currently source-based.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Clone the repository:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+git clone <repo-url>
+cd mirage-library
+```
 
-## Deploy on Vercel
+2. Create and activate a virtual environment:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# mirage-library
+3. Install runtime dependencies:
+
+```bash
+pip install requests pandas
+```
+
+4. Add the library source directory to `PYTHONPATH`:
+
+```bash
+export PYTHONPATH="$PWD/mirage-library:$PYTHONPATH"
+```
+
+### Configure API Access
+
+The Python client defaults to the live dashboard API. You can override it with `MIRAGE_API_BASE` if needed.
+
+```bash
+export MIRAGE_API_BASE="https://dashboard.mirage-project.org/api"
+```
+
+### Run a Smoke Test
+
+Use the built-in endpoint test script:
+
+```bash
+python3 mirage-library/test.py
+```
+
+## Usage
+
+```python
+from lib import MIRAGEClient
+
+client = MIRAGEClient()
+
+results = client.search(limit=5)
+print(results.head())
+
+locations = client.get_locations()
+print(locations.head())
+```
+
+You can also point the client to another deployment:
+
+```python
+from lib import MIRAGEClient
+
+client = MIRAGEClient(base_url="https://dashboard.mirage-project.org/api")
+```
+
+## API Coverage
+
+The client targets these dashboard routes:
+
+- `POST /search`
+- `POST /search/suggest`
+- `GET /location`
+- `GET /location/{id}`
+- `GET /location/fields`
+- `GET /station/city`
+- `GET /station/fields`
+- `GET /meta/{id}`
+- `POST /meta/viz`
+- `POST /meta/viz/map`
+- `POST /meta/viz/network`
+- `POST /meta/viz/hist`
+- `POST /meta/viz/scatter`
+- `POST /meta/viz/radar`
+- `POST /meta/viz/average`
+- `GET /filters/available`
+- `GET /range`
+- `POST /download`
+
+## Current Status
+
+Live endpoint testing against `https://dashboard.mirage-project.org/api` confirmed that most routes are reachable and returning data.
+
+Known issues from current testing:
+
+- `/meta/viz/hist` returned `No valid metrics provided.`
+- `/range` returned `500 Internal Server Error`
+
+## Project Layout
+
+- [`mirage-library/lib.py`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/lib.py)
+  Python client implementation
+- [`mirage-library/test.py`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/test.py)
+  Endpoint smoke-test script
+- [`mirage-library/miragelib-test`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/miragelib-test)
+  Local development helper for Postgres, Elasticsearch, and Next.js
+
+## Development
+
+If you need to run the dashboard app locally instead of using the deployed API:
+
+```bash
+npm install
+npm run dev
+```
+
+The local API routes are served by the Next.js app in this repository. For local backend dependencies, see:
+
+- [`env.local.example`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/env.local.example)
+- [`mirage-library/miragelib-test`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/miragelib-test)
