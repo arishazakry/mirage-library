@@ -11,6 +11,18 @@ import json
 import os
 
 DEFAULT_API_BASE = "https://dashboard.mirage-project.org/api"
+METRIC_ALIASES = {
+    'danceability': 'track_sp_danceability',
+    'speechiness': 'track_sp_speechiness',
+    'acousticness': 'track_sp_acousticness',
+    'instrumentalness': 'track_sp_instrumentalness',
+    'liveness': 'track_sp_liveness',
+    'energy': 'track_sp_energy',
+    'valence': 'track_sp_valence',
+    'year': 'track_sp_year',
+    'popularity': 'track_sp_popularity',
+    'tempo': 'track_sp_tempo',
+}
 
 
 class MIRAGEClient:
@@ -129,6 +141,11 @@ class MIRAGEClient:
                 filters[key] = {'value': [value]}
 
         return filters
+
+    @staticmethod
+    def _normalize_metric(metric: str) -> str:
+        """Map shorthand metric names to API field names."""
+        return METRIC_ALIASES.get(metric, metric)
     
     
     # ================================================================
@@ -443,7 +460,7 @@ class MIRAGEClient:
             >>> hist = client.get_histogram_data('tempo')
             >>> # Use for histogram visualization
         """
-        params['field'] = field
+        params['metrics'] = [self._normalize_metric(field)]
         return self.get_viz_data('hist', **params)
     
     
@@ -465,7 +482,12 @@ class MIRAGEClient:
             >>> scatter = client.get_scatter_data('energy', 'valence')
             >>> # Use for scatter plot
         """
-        params.update({'metrics': [x_field, y_field]})
+        params.update({
+            'metrics': [
+                self._normalize_metric(x_field),
+                self._normalize_metric(y_field),
+            ]
+        })
         return self.get_viz_data('scatter', **params)
     
     
