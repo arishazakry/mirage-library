@@ -23,9 +23,10 @@ This repository does not yet include PyPI packaging metadata, so installation is
 
 1. Download the package archive:
 
-Package archive: [mirage-library-test.zip](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library-test.zip)
+Package archive: `https://github.com/<owner>/<repo>/releases/download/<tag>/mirage-library-test.zip`
 
 ```bash
+curl -L -o mirage-library-test.zip "https://github.com/<owner>/<repo>/releases/download/<tag>/mirage-library-test.zip"
 unzip mirage-library-test.zip
 ```
 
@@ -45,7 +46,7 @@ pip install requests pandas
 4. Add the extracted library directory to `PYTHONPATH`:
 
 ```bash
-export PYTHONPATH="$PWD/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library:$PYTHONPATH"
+export PYTHONPATH="$PWD/mirage-library:$PYTHONPATH"
 ```
 
 ### Configure API Access
@@ -61,7 +62,7 @@ export MIRAGE_API_BASE="https://dashboard.mirage-project.org/api"
 Use the built-in endpoint test script:
 
 ```bash
-python3 Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/test.py
+python3 mirage-library/test.py
 ```
 
 ## Usage
@@ -166,11 +167,11 @@ Known issues from current testing:
 
 ## Project Layout
 
-- [`mirage-library/lib.py`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/lib.py)
+- `mirage-library/lib.py`
   Python client implementation
-- [`mirage-library/test.py`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/test.py)
+- `mirage-library/test.py`
   Endpoint smoke-test script
-- [`mirage-library/miragelib-test`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/miragelib-test)
+- `mirage-library/miragelib-test`
   Local development helper for Postgres, Elasticsearch, and Next.js
 
 ## Development
@@ -184,5 +185,5 @@ npm run dev
 
 The local API routes are served by the Next.js app in this repository. For local backend dependencies, see:
 
-- [`env.local.example`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/env.local.example)
-- [`mirage-library/miragelib-test`](/Users/arishazakry/Documents/MIRAGE/mirage-w26/mirage-library/mirage-library/miragelib-test)
+- `env.local.example`
+- `mirage-library/miragelib-test`
