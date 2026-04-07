@@ -380,23 +380,32 @@ class MIRAGEClient:
         return data
     
     
-    def get_data_range(self, field: Optional[str] = None) -> Dict:
+    def get_data_range(self, index: str, fields: List[str]) -> Dict:
         """
         Get data ranges for fields
         
         Uses: GET /api/range
         
         Args:
-            field: Specific field to get range for (optional)
+            index: Elasticsearch index name, for example 'radio_events'
+            fields: One or more field names to aggregate
             
         Returns:
-            Dictionary with min/max values
+            Dictionary with per-field statistics
             
         Example:
-            >>> ranges = client.get_data_range('tempo')
-            >>> print(f"Tempo range: {ranges['min']} - {ranges['max']}")
+            >>> ranges = client.get_data_range('radio_events', ['track_mb_year', 'track_mb_duration'])
+            >>> print(ranges['ranges']['track_mb_year'])
         """
-        params = {'field': field} if field else {}
+        if not index:
+            raise ValueError("index is required")
+        if not fields:
+            raise ValueError("fields must contain at least one field name")
+
+        params = {
+            'index': index,
+            'fields': ','.join(fields),
+        }
         data = self._get('/range', params)
         return data
     

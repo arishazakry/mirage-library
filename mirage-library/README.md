@@ -103,14 +103,14 @@ meta = client.get_track_meta("evt_001")
 ## Filters and Utilities
 
 - `get_available_filters() -> Dict`
-- `get_data_range(field=None) -> Dict`
+- `get_data_range(index, fields) -> Dict`
 - `download_data(format="csv", filters=None, query=None, ids=None) -> bytes`
 
 Example:
 
 ```python
 filters = client.get_available_filters()
-ranges = client.get_data_range()
+ranges = client.get_data_range("radio_events", ["track_mb_year", "track_mb_duration"])
 csv_bytes = client.download_data(filters={"location_rg_country": {"value": ["Indonesia"]}})
 ```
 

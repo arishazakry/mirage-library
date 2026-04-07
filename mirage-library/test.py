@@ -166,8 +166,8 @@ if __name__ == '__main__':
         "Data Range",
         "/range",
         params={
-            'index': 'artists',
-            'fields': 'artist_sp_popularity,artist_sp_followers'
+            'index': 'radio_events',
+            'fields': 'track_mb_year,track_mb_duration'
         }
     )
     
