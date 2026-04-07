@@ -11,18 +11,6 @@ import json
 import os
 
 DEFAULT_API_BASE = "https://dashboard.mirage-project.org/api"
-METRIC_ALIASES = {
-    'danceability': 'track_sp_danceability',
-    'speechiness': 'track_sp_speechiness',
-    'acousticness': 'track_sp_acousticness',
-    'instrumentalness': 'track_sp_instrumentalness',
-    'liveness': 'track_sp_liveness',
-    'energy': 'track_sp_energy',
-    'valence': 'track_sp_valence',
-    'year': 'track_sp_year',
-    'popularity': 'track_sp_popularity',
-    'tempo': 'track_sp_tempo',
-}
 
 
 class MIRAGEClient:
@@ -142,12 +130,6 @@ class MIRAGEClient:
 
         return filters
 
-    @staticmethod
-    def _normalize_metric(metric: str) -> str:
-        """Map shorthand metric names to API field names."""
-        return METRIC_ALIASES.get(metric, metric)
-    
-    
     # ================================================================
     # SEARCH - Main search functionality
     # ================================================================
@@ -375,153 +357,6 @@ class MIRAGEClient:
         """
         data = self._get(f'/meta/{track_id}')
         return data
-    
-    
-    # ================================================================
-    # VISUALIZATIONS - Data for charts/graphs
-    # ================================================================
-    
-    def get_viz_data(self, viz_type: str = 'general', **params) -> Dict:
-        """
-        Get visualization data
-        
-        Uses: POST /api/meta/viz or /api/meta/viz/{type}
-        
-        Args:
-            viz_type: Type of visualization 
-                     ('general', 'map', 'network', 'hist', 'scatter', 'radar', 'average')
-            **params: Additional parameters for the visualization
-            
-        Returns:
-            Dictionary with visualization data
-            
-        Example:
-            >>> # Get map data
-            >>> map_data = client.get_viz_data('map', country='Indonesia')
-            >>> 
-            >>> # Get histogram data
-            >>> hist_data = client.get_viz_data('hist', field='tempo')
-        """
-        if viz_type == 'general':
-            endpoint = '/meta/viz'
-        else:
-            endpoint = f'/meta/viz/{viz_type}'
-        
-        data = self._post(endpoint, params)
-        return data
-    
-    
-    def get_map_data(self, **params) -> Dict:
-        """
-        Get geographic map visualization data
-        
-        Uses: POST /api/meta/viz/map
-        
-        Returns:
-            Dictionary with map coordinates and values
-            
-        Example:
-            >>> map_data = client.get_map_data()
-            >>> # Use for geographic heatmap
-        """
-        return self.get_viz_data('map', **params)
-    
-    
-    def get_network_data(self, **params) -> Dict:
-        """
-        Get network graph data (artist/track relationships)
-        
-        Uses: POST /api/meta/viz/network
-        
-        Returns:
-            Dictionary with nodes and edges for network graph
-            
-        Example:
-            >>> network = client.get_network_data(country='Indonesia')
-            >>> # Use for network visualization
-        """
-        return self.get_viz_data('network', **params)
-    
-    
-    def get_histogram_data(self, field: str, **params) -> Dict:
-        """
-        Get histogram data for a field
-        
-        Uses: POST /api/meta/viz/hist
-        
-        Args:
-            field: Field to create histogram for
-            **params: Additional parameters
-            
-        Returns:
-            Dictionary with histogram bins and counts
-            
-        Example:
-            >>> hist = client.get_histogram_data('tempo')
-            >>> # Use for histogram visualization
-        """
-        params['metrics'] = [self._normalize_metric(field)]
-        return self.get_viz_data('hist', **params)
-    
-    
-    def get_scatter_data(self, x_field: str, y_field: str, **params) -> Dict:
-        """
-        Get scatter plot data
-        
-        Uses: POST /api/meta/viz/scatter
-        
-        Args:
-            x_field: Field for X axis
-            y_field: Field for Y axis
-            **params: Additional parameters
-            
-        Returns:
-            Dictionary with x, y coordinates
-            
-        Example:
-            >>> scatter = client.get_scatter_data('energy', 'valence')
-            >>> # Use for scatter plot
-        """
-        params.update({
-            'metrics': [
-                self._normalize_metric(x_field),
-                self._normalize_metric(y_field),
-            ]
-        })
-        return self.get_viz_data('scatter', **params)
-    
-    
-    def get_radar_data(self, **params) -> Dict:
-        """
-        Get radar chart data
-        
-        Uses: POST /api/meta/viz/radar
-        
-        Returns:
-            Dictionary with radar chart values
-            
-        Example:
-            >>> radar = client.get_radar_data(country='Indonesia')
-            >>> # Use for radar/spider chart
-        """
-        return self.get_viz_data('radar', **params)
-    
-    
-    def get_average_stats(self, **params) -> Dict:
-        """
-        Get average statistics
-        
-        Uses: POST /api/meta/viz/average
-        
-        Returns:
-            Dictionary with average values
-            
-        Example:
-            >>> stats = client.get_average_stats(country='Mexico')
-            >>> print(stats['avg_tempo'], stats['avg_energy'])
-        """
-        return self.get_viz_data('average', **params)
-    
     
     # ================================================================
     # FILTERS & UTILITIES

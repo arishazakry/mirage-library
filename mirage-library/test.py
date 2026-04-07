@@ -155,57 +155,13 @@ if __name__ == '__main__':
         "/station/fields"
     )
     
-    # 4. Visualizations
-    test_endpoint(
-        "Viz - Map",
-        "/meta/viz/map",
-        method='POST',
-        payload={
-            'query': {'key': '*', 'value': ''},
-            'filters': {}
-        }
-    )
-    
-    test_endpoint(
-        "Viz - Network",
-        "/meta/viz/network",
-        method='POST',
-        payload={
-            'query': {'key': '*', 'value': ''},
-            'filters': {},
-            'metadataVariable': 'artists',
-            'maxNodes': 50
-        }
-    )
-    
-    test_endpoint(
-        "Viz - Histogram",
-        "/meta/viz/hist",
-        method='POST',
-        payload={
-            'query': {'key': '*', 'value': ''},
-            'filters': {},
-            'metrics': ['track_sp_energy']
-        }
-    )
-    
-    test_endpoint(
-        "Viz - Average Stats",
-        "/meta/viz/average",
-        method='POST',
-        payload={
-            'query': {'key': '*', 'value': ''},
-            'filters': {}
-        }
-    )
-    
-    # 5. Filters
+    # 4. Filters
     test_endpoint(
         "Available Filters",
         "/filters/available"
     )
     
-    # 6. Utilities
+    # 5. Utilities
     test_endpoint(
         "Data Range",
         "/range",
